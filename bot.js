@@ -1,7 +1,18 @@
+const http = require("http");
 const TelegramBot = require("node-telegram-bot-api");
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token, { polling: true });
+
+const server = http.createServer((req, res) => {
+  res.writeHead(200, { "Content-Type": "text/plain" });
+  res.end("Bot is running");
+});
+
+const port = process.env.PORT || 3000;
+server.listen(port, () => {
+  console.log(`HTTP-сервер запущен на порту ${port}`);
+});
 
 const stickerPacks = [
   "psihomem_by_fStikBot",
@@ -94,12 +105,9 @@ async function loadStickers() {
       console.error(`Ошибка при загрузке пака ${pack}:`, error);
     }
   }
-  console.log(`Загружено ${allStickers.length} стикеров`);
 }
 
-loadStickers().then(() => {
-  console.log("Бот готов к работе");
-});
+loadStickers();
 
 bot.onText(/\/sticker/, (msg) => {
   const chatId = msg.chat.id;
