@@ -128,4 +128,20 @@ bot.onText(/\/reset/, (msg) => {
   bot.sendMessage(msg.chat.id, "Список отправленных стикеров сброшен!");
 });
 
+bot.onText(/\/info/, (msg) => {
+  const chatId = msg.chat.id;
+  const packCount = stickerPacks.length;
+  const stickerCount = allStickers.length;
+  bot.sendMessage(
+    chatId,
+    `Всего стикерпаков: ${packCount}\nВсего стикеров: ${stickerCount}`
+  );
+});
+
+bot.setMyCommands([
+  { command: "/sticker", description: "Получить случайный стикер" },
+  { command: "/reset", description: "Сбросить список отправленных стикеров" },
+  { command: "/info", description: "Получить информацию о стикерпаках" },
+]);
+
 console.log("Бот запущен...");
