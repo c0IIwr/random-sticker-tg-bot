@@ -140,9 +140,14 @@ bot.onText(/\/info/, (msg) => {
   const chatId = msg.chat.id;
   const packCount = stickerPacks.length;
   const stickerCount = allStickers.length;
+  const sentCount = sentStickers.size;
+  const remainingCount = stickerCount - sentCount;
   bot.sendMessage(
     chatId,
-    `Всего стикерпаков: ${packCount}\nВсего стикеров: ${stickerCount}`
+    `Всего стикерпаков: ${packCount}\n` +
+      `Всего стикеров: ${stickerCount}\n` +
+      `Отправлено стикеров: ${sentCount}\n` +
+      `Осталось стикеров: ${remainingCount}`
   );
 });
 
