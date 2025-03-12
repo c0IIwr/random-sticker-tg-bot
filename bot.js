@@ -123,4 +123,9 @@ bot.onText(/\/sticker/, (msg) => {
   bot.sendSticker(chatId, sticker.file_id);
 });
 
+bot.onText(/\/reset/, (msg) => {
+  sentStickers.clear();
+  bot.sendMessage(msg.chat.id, "Список отправленных стикеров сброшен!");
+});
+
 console.log("Бот запущен...");
