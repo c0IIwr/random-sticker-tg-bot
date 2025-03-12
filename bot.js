@@ -109,24 +109,38 @@ async function loadStickers() {
 
 loadStickers();
 
-bot.onText(/\/sticker/, (msg) => {
+bot.onText(/\/sticker/, async (msg) => {
   const chatId = msg.chat.id;
-  if (allStickers.length === 0) {
-    bot.sendMessage(chatId, "Стикеры еще не загружены или их нет!");
+
+  if (stickerPacks.length === 0) {
+    bot.sendMessage(chatId, "Нет доступных стикерпаков!");
     return;
   }
 
-  const availableStickers = allStickers.filter(
-    (s) => !sentStickers.has(s.file_id)
-  );
+  let availablePacks = stickerPacks.filter((pack) => {
+    const stickers = allStickers.filter((s) => s.set_name === pack);
+    const availableStickers = stickers.filter(
+      (s) => !sentStickers.has(s.file_id)
+    );
+    return availableStickers.length > 0;
+  });
 
-  if (availableStickers.length === 0) {
+  if (availablePacks.length === 0) {
     bot.sendMessage(chatId, "Все стикеры уже были отправлены!");
     return;
   }
 
+  const randomPackIndex = Math.floor(Math.random() * availablePacks.length);
+  const randomPack = availablePacks[randomPackIndex];
+
+  const stickers = allStickers.filter((s) => s.set_name === randomPack);
+  const availableStickers = stickers.filter(
+    (s) => !sentStickers.has(s.file_id)
+  );
+
   const randomIndex = Math.floor(Math.random() * availableStickers.length);
   const sticker = availableStickers[randomIndex];
+
   sentStickers.add(sticker.file_id);
   bot.sendSticker(chatId, sticker.file_id);
 });
@@ -142,6 +156,7 @@ bot.onText(/\/info/, (msg) => {
   const stickerCount = allStickers.length;
   const sentCount = sentStickers.size;
   const remainingCount = stickerCount - sentCount;
+
   bot.sendMessage(
     chatId,
     `Всего стикерпаков: ${packCount}\n` +
@@ -152,7 +167,10 @@ bot.onText(/\/info/, (msg) => {
 });
 
 bot.setMyCommands([
-  { command: "/sticker", description: "Получить случайный стикер" },
+  {
+    command: "/sticker",
+    description: "Получить случайный стикер из случайного пака",
+  },
   { command: "/reset", description: "Сбросить список отправленных стикеров" },
   { command: "/info", description: "Получить информацию о стикерпаках" },
 ]);
