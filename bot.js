@@ -1,18 +1,15 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 
-// Настройка бота
-const token = process.env.TOKEN; // Токен бота из переменных окружения
-const bot = new TelegramBot(token); // Создаём бота без polling
+const token = process.env.TOKEN;
+const bot = new TelegramBot(token);
 
-// Настройка сервера с помощью express
 const server = express();
-server.use(express.json()); // Для парсинга JSON-запросов от Telegram
+server.use(express.json());
 
-// Установка вебхука
 const webhookPath = `/bot${token}`;
 const port = process.env.PORT || 3000;
-const webhookUrl = `https://random-sticker-tg-bot.onrender.com${webhookPath}`; // Замените на ваш URL
+const webhookUrl = `https://random-sticker-tg-bot.onrender.com${webhookPath}`;
 
 bot
   .setWebHook(webhookUrl)
@@ -23,18 +20,15 @@ bot
     console.error("Ошибка при установке вебхука:", error);
   });
 
-// Обработка обновлений от Telegram
 server.post(webhookPath, (req, res) => {
   bot.processUpdate(req.body);
-  res.sendStatus(200); // Отправляем Telegram подтверждение получения
+  res.sendStatus(200);
 });
 
-// Запуск сервера
 server.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
 
-// Список стикерпаков
 const stickerPacks = [
   "psihomem_by_fStikBot",
   "Bigkittypack",
@@ -117,7 +111,6 @@ const stickerPacks = [
 let allStickers = [];
 let sentStickers = new Set();
 
-// Функция для загрузки стикеров
 async function loadStickers() {
   for (const pack of stickerPacks) {
     try {
@@ -130,10 +123,8 @@ async function loadStickers() {
   console.log(`Загружено ${allStickers.length} стикеров`);
 }
 
-// Загружаем стикеры при старте
 loadStickers();
 
-// Обработка команды /sticker с try-catch
 bot.onText(/\/sticker/, async (msg) => {
   try {
     const chatId = msg.chat.id;
@@ -175,7 +166,6 @@ bot.onText(/\/sticker/, async (msg) => {
   }
 });
 
-// Обработка команды /reset с try-catch
 bot.onText(/\/reset/, (msg) => {
   try {
     sentStickers.clear();
@@ -186,7 +176,6 @@ bot.onText(/\/reset/, (msg) => {
   }
 });
 
-// Обработка команды /info с try-catch
 bot.onText(/\/info/, (msg) => {
   try {
     const chatId = msg.chat.id;
@@ -208,7 +197,6 @@ bot.onText(/\/info/, (msg) => {
   }
 });
 
-// Установка команд в меню бота
 bot.setMyCommands([
   {
     command: "/sticker",
