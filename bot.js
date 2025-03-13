@@ -1,5 +1,6 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
+const { MongoClient } = require("mongodb");
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -28,6 +29,23 @@ server.post(webhookPath, (req, res) => {
 server.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
+
+const mongoUrl = process.env.MONGO_URL;
+const client = new MongoClient(mongoUrl);
+
+async function connectToDb() {
+  try {
+    await client.connect();
+    console.log("Подключено к MongoDB");
+  } catch (error) {
+    console.error("Ошибка подключения к MongoDB:", error);
+  }
+}
+
+connectToDb();
+
+const db = client.db("stickerBotDb");
+const usersCollection = db.collection("users");
 
 const stickerPacks = [
   "psihomem_by_fStikBot",
@@ -109,7 +127,6 @@ const stickerPacks = [
 ];
 
 let allStickers = [];
-let sentStickers = new Set();
 
 async function loadStickers() {
   for (const pack of stickerPacks) {
@@ -125,9 +142,26 @@ async function loadStickers() {
 
 loadStickers();
 
+async function getUserData(chatId) {
+  let user = await usersCollection.findOne({ chatId: chatId.toString() });
+  if (!user) {
+    user = { chatId: chatId.toString(), sentStickers: [] };
+    await usersCollection.insertOne(user);
+  }
+  return user;
+}
+
+async function saveUserData(user) {
+  await usersCollection.updateOne(
+    { chatId: user.chatId },
+    { $set: { sentStickers: user.sentStickers } }
+  );
+}
+
 bot.onText(/\/sticker/, async (msg) => {
   try {
-    const chatId = msg.chat.id;
+    const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId);
 
     if (stickerPacks.length === 0) {
       bot.sendMessage(chatId, "Нет доступных стикерпаков!");
@@ -137,7 +171,7 @@ bot.onText(/\/sticker/, async (msg) => {
     let availablePacks = stickerPacks.filter((pack) => {
       const stickers = allStickers.filter((s) => s.set_name === pack);
       const availableStickers = stickers.filter(
-        (s) => !sentStickers.has(s.file_id)
+        (s) => !user.sentStickers.includes(s.file_id)
       );
       return availableStickers.length > 0;
     });
@@ -152,13 +186,14 @@ bot.onText(/\/sticker/, async (msg) => {
 
     const stickers = allStickers.filter((s) => s.set_name === randomPack);
     const availableStickers = stickers.filter(
-      (s) => !sentStickers.has(s.file_id)
+      (s) => !user.sentStickers.includes(s.file_id)
     );
 
     const randomIndex = Math.floor(Math.random() * availableStickers.length);
     const sticker = availableStickers[randomIndex];
 
-    sentStickers.add(sticker.file_id);
+    user.sentStickers.push(sticker.file_id);
+    await saveUserData(user);
     bot.sendSticker(chatId, sticker.file_id);
   } catch (error) {
     console.error("Ошибка в команде /sticker:", error);
@@ -166,22 +201,26 @@ bot.onText(/\/sticker/, async (msg) => {
   }
 });
 
-bot.onText(/\/reset/, (msg) => {
+bot.onText(/\/reset/, async (msg) => {
   try {
-    sentStickers.clear();
-    bot.sendMessage(msg.chat.id, "Список отправленных стикеров сброшен!");
+    const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId);
+    user.sentStickers = [];
+    await saveUserData(user);
+    bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
   }
 });
 
-bot.onText(/\/info/, (msg) => {
+bot.onText(/\/info/, async (msg) => {
   try {
-    const chatId = msg.chat.id;
+    const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId);
     const packCount = stickerPacks.length;
     const stickerCount = allStickers.length;
-    const sentCount = sentStickers.size;
+    const sentCount = user.sentStickers.length;
     const remainingCount = stickerCount - sentCount;
 
     bot.sendMessage(
