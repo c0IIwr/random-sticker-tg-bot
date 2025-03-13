@@ -1,5 +1,6 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
+const fs = require("fs").promises;
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -109,7 +110,30 @@ const stickerPacks = [
 ];
 
 let allStickers = [];
-let sentStickers = new Set();
+let userSentStickers = {};
+const dataFile = "sentStickers.json";
+
+async function loadUserData() {
+  try {
+    const data = await fs.readFile(dataFile, "utf8");
+    userSentStickers = JSON.parse(data);
+    console.log("Данные пользователей загружены");
+  } catch (error) {
+    console.log("Файл данных не найден, начинаем с пустого объекта");
+    userSentStickers = {};
+  }
+}
+
+async function saveUserData() {
+  try {
+    await fs.writeFile(dataFile, JSON.stringify(userSentStickers));
+    console.log("Данные пользователей сохранены");
+  } catch (error) {
+    console.error("Ошибка при сохранении данных:", error);
+  }
+}
+
+loadUserData();
 
 async function loadStickers() {
   for (const pack of stickerPacks) {
@@ -127,7 +151,11 @@ loadStickers();
 
 bot.onText(/\/sticker/, async (msg) => {
   try {
-    const chatId = msg.chat.id;
+    const chatId = msg.chat.id.toString();
+
+    if (!userSentStickers[chatId]) {
+      userSentStickers[chatId] = new Set();
+    }
 
     if (stickerPacks.length === 0) {
       bot.sendMessage(chatId, "Нет доступных стикерпаков!");
@@ -137,7 +165,7 @@ bot.onText(/\/sticker/, async (msg) => {
     let availablePacks = stickerPacks.filter((pack) => {
       const stickers = allStickers.filter((s) => s.set_name === pack);
       const availableStickers = stickers.filter(
-        (s) => !sentStickers.has(s.file_id)
+        (s) => !userSentStickers[chatId].has(s.file_id)
       );
       return availableStickers.length > 0;
     });
@@ -152,13 +180,14 @@ bot.onText(/\/sticker/, async (msg) => {
 
     const stickers = allStickers.filter((s) => s.set_name === randomPack);
     const availableStickers = stickers.filter(
-      (s) => !sentStickers.has(s.file_id)
+      (s) => !userSentStickers[chatId].has(s.file_id)
     );
 
     const randomIndex = Math.floor(Math.random() * availableStickers.length);
     const sticker = availableStickers[randomIndex];
 
-    sentStickers.add(sticker.file_id);
+    userSentStickers[chatId].add(sticker.file_id);
+    await saveUserData();
     bot.sendSticker(chatId, sticker.file_id);
   } catch (error) {
     console.error("Ошибка в команде /sticker:", error);
@@ -166,10 +195,12 @@ bot.onText(/\/sticker/, async (msg) => {
   }
 });
 
-bot.onText(/\/reset/, (msg) => {
+bot.onText(/\/reset/, async (msg) => {
   try {
-    sentStickers.clear();
-    bot.sendMessage(msg.chat.id, "Список отправленных стикеров сброшен!");
+    const chatId = msg.chat.id.toString();
+    userSentStickers[chatId] = new Set();
+    await saveUserData();
+    bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
@@ -178,10 +209,12 @@ bot.onText(/\/reset/, (msg) => {
 
 bot.onText(/\/info/, (msg) => {
   try {
-    const chatId = msg.chat.id;
+    const chatId = msg.chat.id.toString();
     const packCount = stickerPacks.length;
     const stickerCount = allStickers.length;
-    const sentCount = sentStickers.size;
+    const sentCount = userSentStickers[chatId]
+      ? userSentStickers[chatId].size
+      : 0;
     const remainingCount = stickerCount - sentCount;
 
     bot.sendMessage(
