@@ -1,6 +1,8 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const { MongoClient } = require("mongodb");
+const { google } = require("googleapis");
+const fs = require("fs");
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -46,6 +48,14 @@ connectToDb();
 
 const db = client.db("stickerBotDb");
 const usersCollection = db.collection("users");
+
+const credentials = JSON.parse(fs.readFileSync("credentials.json"));
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+const sheets = google.sheets({ version: "v4", auth });
+const spreadsheetId = process.env.SPREADSHEET_ID;
 
 const stickerPacks = [
   "psihomem_by_fStikBot",
@@ -145,7 +155,16 @@ loadStickers();
 async function getUserData(chatId) {
   let user = await usersCollection.findOne({ chatId: chatId.toString() });
   if (!user) {
-    user = { chatId: chatId.toString(), sentStickers: [] };
+    user = {
+      chatId: chatId.toString(),
+      sentStickers: [],
+      stickerCount: 0,
+      resetCount: 0,
+      firstSent: null,
+      lastSent: null,
+      username: "N/A",
+      firstName: "N/A",
+    };
     await usersCollection.insertOne(user);
   }
   return user;
@@ -154,14 +173,89 @@ async function getUserData(chatId) {
 async function saveUserData(user) {
   await usersCollection.updateOne(
     { chatId: user.chatId },
-    { $set: { sentStickers: user.sentStickers } }
+    {
+      $set: {
+        sentStickers: user.sentStickers,
+        stickerCount: user.stickerCount,
+        resetCount: user.resetCount,
+        firstSent: user.firstSent,
+        lastSent: user.lastSent,
+        username: user.username,
+        firstName: user.firstName,
+      },
+    }
   );
+}
+
+async function updateUserDataInSheet(user) {
+  const chatId = user.chatId;
+  const username = user.username || "N/A";
+  const firstName = user.firstName || "N/A";
+  const stickerCount = user.stickerCount || 0;
+  const resetCount = user.resetCount || 0;
+  const firstSent = user.firstSent ? user.firstSent.toISOString() : "N/A";
+  const lastSent = user.lastSent ? user.lastSent.toISOString() : "N/A";
+
+  const range = "Sheet1!A:A";
+  const response = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range,
+  });
+  const rows = response.data.values || [];
+  const rowIndex = rows.findIndex((row) => row[0] === chatId);
+
+  if (rowIndex === -1) {
+    await sheets.spreadsheets.values.append({
+      spreadsheetId,
+      range: "Sheet1",
+      valueInputOption: "RAW",
+      resource: {
+        values: [
+          [
+            chatId,
+            firstName,
+            username,
+            stickerCount,
+            resetCount,
+            firstSent,
+            lastSent,
+          ],
+        ],
+      },
+    });
+  } else {
+    const updateRange = `Sheet1!A${rowIndex + 1}:G${rowIndex + 1}`;
+    await sheets.spreadsheets.values.update({
+      spreadsheetId,
+      range: updateRange,
+      valueInputOption: "RAW",
+      resource: {
+        values: [
+          [
+            chatId,
+            firstName,
+            username,
+            stickerCount,
+            resetCount,
+            firstSent,
+            lastSent,
+          ],
+        ],
+      },
+    });
+  }
 }
 
 bot.onText(/\/sticker/, async (msg) => {
   try {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId);
+
+    if (!user.firstSent) user.firstSent = new Date();
+    user.lastSent = new Date();
+    user.username = msg.from.username || "N/A";
+    user.firstName = msg.from.first_name || "N/A";
+    user.stickerCount = (user.stickerCount || 0) + 1;
 
     if (stickerPacks.length === 0) {
       bot.sendMessage(chatId, "Нет доступных стикерпаков!");
@@ -183,7 +277,6 @@ bot.onText(/\/sticker/, async (msg) => {
 
     const randomPackIndex = Math.floor(Math.random() * availablePacks.length);
     const randomPack = availablePacks[randomPackIndex];
-
     const stickers = allStickers.filter((s) => s.set_name === randomPack);
     const availableStickers = stickers.filter(
       (s) => !user.sentStickers.includes(s.file_id)
@@ -194,6 +287,7 @@ bot.onText(/\/sticker/, async (msg) => {
 
     user.sentStickers.push(sticker.file_id);
     await saveUserData(user);
+    await updateUserDataInSheet(user);
     bot.sendSticker(chatId, sticker.file_id);
   } catch (error) {
     console.error("Ошибка в команде /sticker:", error);
@@ -206,7 +300,9 @@ bot.onText(/\/reset/, async (msg) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId);
     user.sentStickers = [];
+    user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
+    await updateUserDataInSheet(user);
     bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
