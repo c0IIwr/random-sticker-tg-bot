@@ -403,12 +403,13 @@ bot.onText(/\/info/, async (msg) => {
 });
 
 bot.onText(/котик/i, (msg) => {
-  if (!msg.text.startsWith("/")) {
+  const text = msg.text.toLowerCase();
+  if (text !== "отправить котика" && text !== "ещё котик") {
     sendSticker(msg);
   }
 });
 
-bot.onText(/^(Отправить котика|Ещё котик)$/, (msg) => {
+bot.onText(/^(Отправить котика|Ещё котик)$/i, (msg) => {
   sendSticker(msg);
 });
 
