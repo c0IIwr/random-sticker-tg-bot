@@ -49,7 +49,7 @@ connectToDb();
 const db = client.db("stickerBotDb");
 const usersCollection = db.collection("users");
 
-const credentials = JSON.parse(fs.readFileSync("credentials.json"));
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 const auth = new google.auth.GoogleAuth({
   credentials,
   scopes: ["https://www.googleapis.com/auth/spreadsheets"],
