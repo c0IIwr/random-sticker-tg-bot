@@ -359,7 +359,7 @@ async function sendSticker(msg) {
   }
 }
 
-bot.onText(/\/cat/, (msg) => {
+bot.onText(/\/kitty/, (msg) => {
   sendSticker(msg);
 });
 
@@ -429,7 +429,7 @@ bot.onText(/\/start/, async (msg) => {
 
 bot.setMyCommands([
   {
-    command: "/cat",
+    command: "/kitty",
     description: "Котик из случайного стикерпака",
   },
   {
