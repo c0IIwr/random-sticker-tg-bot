@@ -359,8 +359,53 @@ async function sendSticker(msg) {
   }
 }
 
-bot.onText(/\/sticker/, (msg) => {
+bot.onText(/\/котик/, (msg) => {
   sendSticker(msg);
+});
+
+bot.onText(/\/сброс/, async (msg) => {
+  try {
+    const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId, msg);
+    user.sentStickers = [];
+    user.resetCount = (user.resetCount || 0) + 1;
+    await saveUserData(user);
+    await updateUserDataInSheet(user);
+    bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
+  } catch (error) {
+    console.error("Ошибка в команде /сброс:", error);
+    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
+  }
+});
+
+bot.onText(/\/инфа/, async (msg) => {
+  try {
+    const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId, msg);
+    const packCount = stickerPacks.length;
+    const stickerCount = allStickers.length;
+    const sentCount = user.sentStickers.length;
+    const remainingCount = stickerCount - sentCount;
+    const percentageSent =
+      stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
+
+    bot.sendMessage(
+      chatId,
+      `Всего стикерпаков: ${packCount}\n` +
+        `Всего стикеров: ${stickerCount}\n` +
+        `Отправлено стикеров: ${sentCount} (${percentageSent}%)\n` +
+        `Осталось стикеров: ${remainingCount}`
+    );
+  } catch (error) {
+    console.error("Ошибка в команде /инфа:", error);
+    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
+  }
+});
+
+bot.onText(/котик/i, (msg) => {
+  if (!msg.text.startsWith("/")) {
+    sendSticker(msg);
+  }
 });
 
 bot.onText(/^(Отправить котика|Ещё котик)$/, (msg) => {
@@ -381,52 +426,19 @@ bot.onText(/\/start/, async (msg) => {
   });
 });
 
-bot.onText(/\/reset/, async (msg) => {
-  try {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
-    user.sentStickers = [];
-    user.resetCount = (user.resetCount || 0) + 1;
-    await saveUserData(user);
-    await updateUserDataInSheet(user);
-    bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
-  } catch (error) {
-    console.error("Ошибка в команде /reset:", error);
-    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
-  }
-});
-
-bot.onText(/\/info/, async (msg) => {
-  try {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
-    const packCount = stickerPacks.length;
-    const stickerCount = allStickers.length;
-    const sentCount = user.sentStickers.length;
-    const remainingCount = stickerCount - sentCount;
-    const percentageSent =
-      stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
-
-    bot.sendMessage(
-      chatId,
-      `Всего стикерпаков: ${packCount}\n` +
-        `Всего стикеров: ${stickerCount}\n` +
-        `Отправлено стикеров: ${sentCount} (${percentageSent}%)\n` +
-        `Осталось стикеров: ${remainingCount}`
-    );
-  } catch (error) {
-    console.error("Ошибка в команде /info:", error);
-    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
-  }
-});
-
 bot.setMyCommands([
   {
-    command: "/sticker",
-    description: "Получить случайный стикер из случайного пака",
+    command: "/Котик",
+    description: "из случайного стикерпака",
   },
-  { command: "/reset", description: "Сбросить список отправленных стикеров" },
-  { command: "/info", description: "Получить информацию о стикерпаках" },
+  {
+    command: "/Сброс",
+    description: "отправленных стикеров",
+  },
+  {
+    command: "/Инфа",
+    description: "о стикерпаках",
+  },
 ]);
 
 console.log("Бот запущен...");
