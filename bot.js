@@ -168,6 +168,7 @@ async function getUserData(chatId, msg) {
       languageCode: msg.from.language_code || "",
       chatType: msg.chat.type || "",
       chatTitle: msg.chat.type !== "private" ? msg.chat.title || "" : "",
+      chatUsername: msg.chat.username || "",
     };
     await usersCollection.insertOne(user);
   } else {
@@ -177,6 +178,7 @@ async function getUserData(chatId, msg) {
     user.languageCode = msg.from.language_code || "";
     user.chatType = msg.chat.type || "";
     user.chatTitle = msg.chat.type !== "private" ? msg.chat.title || "" : "";
+    user.chatUsername = msg.chat.username || "";
   }
   return user;
 }
@@ -197,6 +199,7 @@ async function saveUserData(user) {
         languageCode: user.languageCode,
         chatType: user.chatType,
         chatTitle: user.chatTitle,
+        chatUsername: user.chatUsername,
       },
     }
   );
@@ -213,6 +216,10 @@ async function updateUserDataInSheet(user) {
   const chatType = user.chatType || "";
   const chatTitle =
     chatType === "private" ? "Личный чат" : user.chatTitle || "Без названия";
+  const chatLink =
+    chatType !== "private" && user.chatUsername
+      ? `https://t.me/${user.chatUsername}`
+      : "";
   const stickerCount = user.stickerCount || 0;
   const resetCount = user.resetCount || 0;
 
@@ -250,6 +257,7 @@ async function updateUserDataInSheet(user) {
     languageCode,
     chatType,
     chatTitle,
+    chatLink,
     stickerCount,
     resetCount,
     firstSent,
