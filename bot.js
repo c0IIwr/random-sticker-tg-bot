@@ -152,7 +152,7 @@ async function loadStickers() {
 
 loadStickers();
 
-async function getUserData(chatId) {
+async function getUserData(chatId, msg) {
   let user = await usersCollection.findOne({ chatId: chatId.toString() });
   if (!user) {
     user = {
@@ -162,10 +162,22 @@ async function getUserData(chatId) {
       resetCount: 0,
       firstSent: null,
       lastSent: null,
-      username: "N/A",
-      firstName: "N/A",
+      firstName: msg.from.first_name || "N/A",
+      lastName: msg.from.last_name || "N/A",
+      username: msg.from.username || "N/A",
+      languageCode: msg.from.language_code || "N/A",
+      chatType: msg.chat.type || "N/A",
+      chatTitle: msg.chat.type !== "private" ? msg.chat.title || "N/A" : "N/A",
     };
     await usersCollection.insertOne(user);
+  } else {
+    user.firstName = msg.from.first_name || "N/A";
+    user.lastName = msg.from.last_name || "N/A";
+    user.username = msg.from.username || "N/A";
+    user.languageCode = msg.from.language_code || "N/A";
+    user.chatType = msg.chat.type || "N/A";
+    user.chatTitle =
+      msg.chat.type !== "private" ? msg.chat.title || "N/A" : "N/A";
   }
   return user;
 }
@@ -180,8 +192,12 @@ async function saveUserData(user) {
         resetCount: user.resetCount,
         firstSent: user.firstSent,
         lastSent: user.lastSent,
-        username: user.username,
         firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        languageCode: user.languageCode,
+        chatType: user.chatType,
+        chatTitle: user.chatTitle,
       },
     }
   );
@@ -189,8 +205,11 @@ async function saveUserData(user) {
 
 async function updateUserDataInSheet(user) {
   const chatId = user.chatId;
+  const fullName = `${user.firstName} ${user.lastName}`.trim() || "N/A";
   const username = user.username || "N/A";
-  const firstName = user.firstName || "N/A";
+  const languageCode = user.languageCode || "N/A";
+  const chatType = user.chatType || "N/A";
+  const chatTitle = user.chatTitle || "N/A";
   const stickerCount = user.stickerCount || 0;
   const resetCount = user.resetCount || 0;
 
@@ -223,8 +242,11 @@ async function updateUserDataInSheet(user) {
 
   const userData = {
     chatId,
-    firstName,
+    fullName,
     username,
+    languageCode,
+    chatType,
+    chatTitle,
     stickerCount,
     resetCount,
     firstSent,
@@ -270,12 +292,10 @@ async function updateUserDataInSheet(user) {
 bot.onText(/\/sticker/, async (msg) => {
   try {
     const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId);
+    const user = await getUserData(chatId, msg);
 
     if (!user.firstSent) user.firstSent = new Date();
     user.lastSent = new Date();
-    user.username = msg.from.username || "N/A";
-    user.firstName = msg.from.first_name || "N/A";
     user.stickerCount = (user.stickerCount || 0) + 1;
 
     if (stickerPacks.length === 0) {
@@ -319,7 +339,7 @@ bot.onText(/\/sticker/, async (msg) => {
 bot.onText(/\/reset/, async (msg) => {
   try {
     const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId);
+    const user = await getUserData(chatId, msg);
     user.sentStickers = [];
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
@@ -334,7 +354,7 @@ bot.onText(/\/reset/, async (msg) => {
 bot.onText(/\/info/, async (msg) => {
   try {
     const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId);
+    const user = await getUserData(chatId, msg);
     const packCount = stickerPacks.length;
     const stickerCount = allStickers.length;
     const sentCount = user.sentStickers.length;
