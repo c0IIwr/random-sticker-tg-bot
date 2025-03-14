@@ -158,6 +158,7 @@ async function getUserData(chatId, msg) {
     user = {
       chatId: chatId.toString(),
       sentStickers: [],
+      recentStickers: [],
       stickerCount: 0,
       resetCount: 0,
       firstSent: null,
@@ -189,6 +190,7 @@ async function saveUserData(user) {
     {
       $set: {
         sentStickers: user.sentStickers,
+        recentStickers: user.recentStickers,
         stickerCount: user.stickerCount,
         resetCount: user.resetCount,
         firstSent: user.firstSent,
@@ -338,12 +340,55 @@ bot.onText(/\/sticker/, async (msg) => {
     const sticker = availableStickers[randomIndex];
 
     user.sentStickers.push(sticker.file_id);
+
+    const now = new Date();
+    user.recentStickers.push(now.getTime());
+    user.recentStickers = user.recentStickers.filter(
+      (timestamp) => now.getTime() - timestamp < 60000
+    );
+
     await saveUserData(user);
     await updateUserDataInSheet(user);
-    bot.sendSticker(chatId, sticker.file_id);
+
+    const recentCount = user.recentStickers.length;
+    let buttonText;
+    if (recentCount === 0) {
+      buttonText = "Отправить котика";
+    } else if (recentCount === 1) {
+      buttonText = "Ещё котик";
+    } else if (recentCount >= 2 && recentCount <= 4) {
+      buttonText = "Ещё ещё котик";
+    } else {
+      buttonText = "БОЛЬШЕ КОТИКОВ";
+    }
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: buttonText,
+            callback_data: "send_sticker",
+          },
+        ],
+      ],
+    };
+
+    bot.sendSticker(chatId, sticker.file_id, {
+      reply_markup: JSON.stringify(keyboard),
+    });
   } catch (error) {
     console.error("Ошибка в команде /sticker:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
+  }
+});
+
+bot.on("callback_query", async (callbackQuery) => {
+  const msg = callbackQuery.message;
+  const chatId = msg.chat.id.toString();
+  const data = callbackQuery.data;
+
+  if (data === "send_sticker") {
+    await bot.onText(/\/sticker/)(msg);
   }
 });
 
@@ -370,12 +415,14 @@ bot.onText(/\/info/, async (msg) => {
     const stickerCount = allStickers.length;
     const sentCount = user.sentStickers.length;
     const remainingCount = stickerCount - sentCount;
+    const percentageSent =
+      stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
 
     bot.sendMessage(
       chatId,
       `Всего стикерпаков: ${packCount}\n` +
         `Всего стикеров: ${stickerCount}\n` +
-        `Отправлено стикеров: ${sentCount}\n` +
+        `Отправлено стикеров: ${sentCount} (${percentageSent}%)\n` +
         `Осталось стикеров: ${remainingCount}`
     );
   } catch (error) {
