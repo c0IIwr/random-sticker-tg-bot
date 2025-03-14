@@ -173,6 +173,9 @@ async function getUserData(chatId, msg) {
     };
     await usersCollection.insertOne(user);
   } else {
+    if (!user.recentStickers) {
+      user.recentStickers = [];
+    }
     user.firstName = msg.from.first_name || "";
     user.lastName = msg.from.last_name || "";
     user.username = msg.from.username || "";
@@ -190,7 +193,7 @@ async function saveUserData(user) {
     {
       $set: {
         sentStickers: user.sentStickers,
-        recentStickers: user.recentStickers,
+        recentStickers: user.recentStickers || [],
         stickerCount: user.stickerCount,
         resetCount: user.resetCount,
         firstSent: user.firstSent,
