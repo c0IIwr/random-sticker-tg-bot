@@ -196,7 +196,7 @@ async function updateUserDataInSheet(user) {
   const firstSent = user.firstSent ? user.firstSent.toISOString() : "N/A";
   const lastSent = user.lastSent ? user.lastSent.toISOString() : "N/A";
 
-  const range = "Sheet1!A:A";
+  const range = "Data!A2:A";
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
     range,
@@ -207,7 +207,7 @@ async function updateUserDataInSheet(user) {
   if (rowIndex === -1) {
     await sheets.spreadsheets.values.append({
       spreadsheetId,
-      range: "Sheet1",
+      range: "Data",
       valueInputOption: "RAW",
       resource: {
         values: [
@@ -224,7 +224,8 @@ async function updateUserDataInSheet(user) {
       },
     });
   } else {
-    const updateRange = `Sheet1!A${rowIndex + 1}:G${rowIndex + 1}`;
+    const updateRow = rowIndex + 2;
+    const updateRange = `Data!A${updateRow}:G${updateRow}`;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: updateRange,
