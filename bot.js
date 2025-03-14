@@ -359,11 +359,11 @@ async function sendSticker(msg) {
   }
 }
 
-bot.onText(/\/котик/, (msg) => {
+bot.onText(/\/cat/, (msg) => {
   sendSticker(msg);
 });
 
-bot.onText(/\/сброс/, async (msg) => {
+bot.onText(/\/reset/, async (msg) => {
   try {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
@@ -373,12 +373,12 @@ bot.onText(/\/сброс/, async (msg) => {
     await updateUserDataInSheet(user);
     bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
   } catch (error) {
-    console.error("Ошибка в команде /сброс:", error);
+    console.error("Ошибка в команде /reset:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
   }
 });
 
-bot.onText(/\/инфа/, async (msg) => {
+bot.onText(/\/info/, async (msg) => {
   try {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
@@ -397,7 +397,7 @@ bot.onText(/\/инфа/, async (msg) => {
         `Осталось стикеров: ${remainingCount}`
     );
   } catch (error) {
-    console.error("Ошибка в команде /инфа:", error);
+    console.error("Ошибка в команде /info:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
   }
 });
@@ -428,16 +428,16 @@ bot.onText(/\/start/, async (msg) => {
 
 bot.setMyCommands([
   {
-    command: "/Котик",
-    description: "из случайного стикерпака",
+    command: "/cat",
+    description: "Котик из случайного стикерпака",
   },
   {
-    command: "/Сброс",
-    description: "отправленных стикеров",
+    command: "/reset",
+    description: "Сброс отправленных стикеров",
   },
   {
-    command: "/Инфа",
-    description: "о стикерпаках",
+    command: "/info",
+    description: "Инфа о стикерпаках",
   },
 ]);
 
