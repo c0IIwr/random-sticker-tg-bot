@@ -158,7 +158,6 @@ async function getUserData(chatId, msg) {
     user = {
       chatId: chatId.toString(),
       sentStickers: [],
-      recentStickers: [],
       stickerCount: 0,
       resetCount: 0,
       firstSent: null,
@@ -173,9 +172,6 @@ async function getUserData(chatId, msg) {
     };
     await usersCollection.insertOne(user);
   } else {
-    if (!user.recentStickers) {
-      user.recentStickers = [];
-    }
     user.firstName = msg.from.first_name || "";
     user.lastName = msg.from.last_name || "";
     user.username = msg.from.username || "";
@@ -193,7 +189,6 @@ async function saveUserData(user) {
     {
       $set: {
         sentStickers: user.sentStickers,
-        recentStickers: user.recentStickers,
         stickerCount: user.stickerCount,
         resetCount: user.resetCount,
         firstSent: user.firstSent,
@@ -343,29 +338,11 @@ async function sendSticker(msg) {
     const sticker = availableStickers[randomIndex];
 
     user.sentStickers.push(sticker.file_id);
-
-    const now = new Date();
-    user.recentStickers.push(now.getTime());
-    user.recentStickers = user.recentStickers.filter(
-      (timestamp) => now.getTime() - timestamp < 60000
-    );
-
     await saveUserData(user);
     await updateUserDataInSheet(user);
 
-    const recentCount = user.recentStickers.length;
-    let buttonText;
-    if (recentCount === 0) {
-      buttonText = "Отправить котика";
-    } else if (recentCount === 1) {
-      buttonText = "Ещё котик";
-    } else if (recentCount >= 2 && recentCount <= 4) {
-      buttonText = "Ещё ещё котик";
-    } else if (recentCount >= 5 && recentCount <= 9) {
-      buttonText = "ЕЩЁ ЕЩЁ КОТИК";
-    } else {
-      buttonText = "БОЛЬШЕ КОТИКОВ";
-    }
+    const buttonText =
+      user.stickerCount === 1 ? "Отправить котика" : "Ещё котик";
 
     const keyboard = {
       keyboard: [[{ text: buttonText }]],
@@ -386,12 +363,23 @@ bot.onText(/\/sticker/, (msg) => {
   sendSticker(msg);
 });
 
-bot.onText(
-  /^(Отправить котика|Ещё котик|Ещё ещё котик|ЕЩЁ ЕЩЁ КОТИК|БОЛЬШЕ КОТИКОВ)$/,
-  (msg) => {
-    sendSticker(msg);
-  }
-);
+bot.onText(/^(Отправить котика|Ещё котик)$/, (msg) => {
+  sendSticker(msg);
+});
+
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id.toString();
+  const user = await getUserData(chatId, msg);
+  const buttonText = user.stickerCount === 0 ? "Отправить котика" : "Ещё котик";
+  const keyboard = {
+    keyboard: [[{ text: buttonText }]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+  await bot.sendMessage(chatId, "Нажмите кнопку, чтобы получить стикер", {
+    reply_markup: JSON.stringify(keyboard),
+  });
+});
 
 bot.onText(/\/reset/, async (msg) => {
   try {
