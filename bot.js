@@ -193,7 +193,7 @@ async function saveUserData(user) {
     {
       $set: {
         sentStickers: user.sentStickers,
-        recentStickers: user.recentStickers || [],
+        recentStickers: user.recentStickers,
         stickerCount: user.stickerCount,
         resetCount: user.resetCount,
         firstSent: user.firstSent,
@@ -305,7 +305,7 @@ async function updateUserDataInSheet(user) {
   }
 }
 
-bot.onText(/\/sticker/, async (msg) => {
+async function sendSticker(msg) {
   try {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
@@ -361,39 +361,37 @@ bot.onText(/\/sticker/, async (msg) => {
       buttonText = "Ещё котик";
     } else if (recentCount >= 2 && recentCount <= 4) {
       buttonText = "Ещё ещё котик";
+    } else if (recentCount >= 5 && recentCount <= 9) {
+      buttonText = "ЕЩЁ ЕЩЁ КОТИК";
     } else {
       buttonText = "БОЛЬШЕ КОТИКОВ";
     }
 
     const keyboard = {
-      inline_keyboard: [
-        [
-          {
-            text: buttonText,
-            callback_data: "send_sticker",
-          },
-        ],
-      ],
+      keyboard: [[{ text: buttonText }]],
+      resize_keyboard: true,
+      one_time_keyboard: false,
     };
 
-    bot.sendSticker(chatId, sticker.file_id, {
+    await bot.sendSticker(chatId, sticker.file_id, {
       reply_markup: JSON.stringify(keyboard),
     });
   } catch (error) {
-    console.error("Ошибка в команде /sticker:", error);
+    console.error("Ошибка в функции sendSticker:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
   }
+}
+
+bot.onText(/\/sticker/, (msg) => {
+  sendSticker(msg);
 });
 
-bot.on("callback_query", async (callbackQuery) => {
-  const msg = callbackQuery.message;
-  const chatId = msg.chat.id.toString();
-  const data = callbackQuery.data;
-
-  if (data === "send_sticker") {
-    await bot.onText(/\/sticker/)(msg);
+bot.onText(
+  /^(Отправить котика|Ещё котик|Ещё ещё котик|ЕЩЁ ЕЩЁ КОТИК|БОЛЬШЕ КОТИКОВ)$/,
+  (msg) => {
+    sendSticker(msg);
   }
-});
+);
 
 bot.onText(/\/reset/, async (msg) => {
   try {
