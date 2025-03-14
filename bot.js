@@ -196,52 +196,54 @@ async function updateUserDataInSheet(user) {
   const firstSent = user.firstSent ? user.firstSent.toISOString() : "N/A";
   const lastSent = user.lastSent ? user.lastSent.toISOString() : "N/A";
 
-  const range = "Data!A2:A";
-  const response = await sheets.spreadsheets.values.get({
+  const headersRange = "Data!A1:Z1";
+  const headersResponse = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range,
+    range: headersRange,
   });
-  const rows = response.data.values || [];
-  const rowIndex = rows.findIndex((row) => row[0] === chatId);
+  const headers = headersResponse.data.values[0];
+
+  const userData = {
+    chatId,
+    firstName,
+    username,
+    stickerCount,
+    resetCount,
+    firstSent,
+    lastSent,
+  };
+
+  const dataRange = "Data!A2:Z";
+  const dataResponse = await sheets.spreadsheets.values.get({
+    spreadsheetId,
+    range: dataRange,
+  });
+  const rows = dataResponse.data.values || [];
+
+  const rowIndex = rows.findIndex(
+    (row) => row[headers.indexOf("chatId")] === chatId
+  );
 
   if (rowIndex === -1) {
+    const newRow = headers.map((header) => userData[header] || "N/A");
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: "Data",
       valueInputOption: "RAW",
       resource: {
-        values: [
-          [
-            chatId,
-            firstName,
-            username,
-            stickerCount,
-            resetCount,
-            firstSent,
-            lastSent,
-          ],
-        ],
+        values: [newRow],
       },
     });
   } else {
     const updateRow = rowIndex + 2;
-    const updateRange = `Data!A${updateRow}:G${updateRow}`;
+    const updateData = headers.map((header) => userData[header] || "N/A");
+    const updateRange = `Data!A${updateRow}:Z${updateRow}`;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
       range: updateRange,
       valueInputOption: "RAW",
       resource: {
-        values: [
-          [
-            chatId,
-            firstName,
-            username,
-            stickerCount,
-            resetCount,
-            firstSent,
-            lastSent,
-          ],
-        ],
+        values: [updateData],
       },
     });
   }
