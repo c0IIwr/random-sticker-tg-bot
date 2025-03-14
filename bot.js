@@ -162,22 +162,21 @@ async function getUserData(chatId, msg) {
       resetCount: 0,
       firstSent: null,
       lastSent: null,
-      firstName: msg.from.first_name || "N/A",
-      lastName: msg.from.last_name || "N/A",
-      username: msg.from.username || "N/A",
-      languageCode: msg.from.language_code || "N/A",
-      chatType: msg.chat.type || "N/A",
-      chatTitle: msg.chat.type !== "private" ? msg.chat.title || "N/A" : "N/A",
+      firstName: msg.from.first_name || "",
+      lastName: msg.from.last_name || "",
+      username: msg.from.username || "",
+      languageCode: msg.from.language_code || "",
+      chatType: msg.chat.type || "",
+      chatTitle: msg.chat.type !== "private" ? msg.chat.title || "" : "",
     };
     await usersCollection.insertOne(user);
   } else {
-    user.firstName = msg.from.first_name || "N/A";
-    user.lastName = msg.from.last_name || "N/A";
-    user.username = msg.from.username || "N/A";
-    user.languageCode = msg.from.language_code || "N/A";
-    user.chatType = msg.chat.type || "N/A";
-    user.chatTitle =
-      msg.chat.type !== "private" ? msg.chat.title || "N/A" : "N/A";
+    user.firstName = msg.from.first_name || "";
+    user.lastName = msg.from.last_name || "";
+    user.username = msg.from.username || "";
+    user.languageCode = msg.from.language_code || "";
+    user.chatType = msg.chat.type || "";
+    user.chatTitle = msg.chat.type !== "private" ? msg.chat.title || "" : "";
   }
   return user;
 }
@@ -205,16 +204,20 @@ async function saveUserData(user) {
 
 async function updateUserDataInSheet(user) {
   const chatId = user.chatId;
-  const fullName = `${user.firstName} ${user.lastName}`.trim() || "N/A";
-  const username = user.username || "N/A";
-  const languageCode = user.languageCode || "N/A";
-  const chatType = user.chatType || "N/A";
-  const chatTitle = user.chatTitle || "N/A";
+  const fullName =
+    user.firstName && user.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user.firstName || user.lastName || "";
+  const username = user.username || "Скрыто";
+  const languageCode = user.languageCode || "";
+  const chatType = user.chatType || "";
+  const chatTitle =
+    chatType === "private" ? "Личный чат" : user.chatTitle || "Без названия";
   const stickerCount = user.stickerCount || 0;
   const resetCount = user.resetCount || 0;
 
   const formatDate = (date) => {
-    if (!date) return "N/A";
+    if (!date) return "";
     const d = new Date(date);
     const options = {
       timeZone: "Europe/Moscow",
@@ -265,7 +268,7 @@ async function updateUserDataInSheet(user) {
   );
 
   if (rowIndex === -1) {
-    const newRow = headers.map((header) => userData[header] || "N/A");
+    const newRow = headers.map((header) => userData[header] || "");
     await sheets.spreadsheets.values.append({
       spreadsheetId,
       range: "Data",
@@ -276,7 +279,7 @@ async function updateUserDataInSheet(user) {
     });
   } else {
     const updateRow = rowIndex + 2;
-    const updateData = headers.map((header) => userData[header] || "N/A");
+    const updateData = headers.map((header) => userData[header] || "");
     const updateRange = `Data!A${updateRow}:Z${updateRow}`;
     await sheets.spreadsheets.values.update({
       spreadsheetId,
