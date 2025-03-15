@@ -224,6 +224,8 @@ async function updateUserDataInSheet(user) {
   const chatLink =
     chatType !== "private" && user.chatUsername
       ? `https://t.me/${user.chatUsername}`
+      : chatType === "private" && user.username
+      ? `https://t.me/${user.username}`
       : "";
   const sentNow = user.sentStickers.length;
   const totalSent = user.stickerCount || 0;
