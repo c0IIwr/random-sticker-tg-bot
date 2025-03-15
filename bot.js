@@ -329,7 +329,6 @@ async function sendStickerAgain(chatId, emojis) {
   });
   if (matchingStickers.length === 0) {
     await bot.sendMessage(chatId, "Не удалось найти стикеры с этими эмодзи 😔");
-    console.error(`No matching stickers found for emojis: ${emojis}`);
     return;
   }
   const randomIndex = Math.floor(Math.random() * matchingStickers.length);
@@ -365,24 +364,31 @@ async function sendRandomStickerFromList(
     (s) => !user.sentStickers.includes(s.file_id)
   );
   if (availableStickers.length === 0) {
-    const emojiString = emojis ? emojis.join(",") : "";
-    const keyboard = {
-      inline_keyboard: [
-        [
-          {
-            text: "Всё равно отправить котика 🤗",
-            callback_data: `send_again_${emojiString}`,
-          },
+    if (emojis && emojis.length > 0) {
+      const emojiString = emojis.join(",");
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "Всё равно отправить котика 🤗",
+              callback_data: `send_again_${emojiString}`,
+            },
+          ],
         ],
-      ],
-    };
-    bot.sendMessage(
-      chatId,
-      "Все стикеры с этими эмодзи уже были отправлены 😔",
-      {
-        reply_markup: JSON.stringify(keyboard),
-      }
-    );
+      };
+      bot.sendMessage(
+        chatId,
+        "Все стикеры с этими эмодзи уже были отправлены 😔",
+        {
+          reply_markup: JSON.stringify(keyboard),
+        }
+      );
+    } else {
+      bot.sendMessage(
+        chatId,
+        "Все стикеры уже были отправлены. Попробуйте сбросить список командой /reset."
+      );
+    }
     return;
   }
   const randomIndex = Math.floor(Math.random() * availableStickers.length);
@@ -540,7 +546,7 @@ bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {
     const text = msg.text.trim();
     if (isOnlyEmojis(text)) {
-      const userEmojis = text.match(regex);
+      const userEmojis = text.match(/[\p{Emoji}]/gu);
       if (userEmojis && userEmojis.length > 0) {
         const matchingStickers = allStickers.filter((sticker) => {
           const stickerEmojis = splitEmojis(sticker.emoji);
@@ -548,7 +554,12 @@ bot.on("message", async (msg) => {
         });
         const chatId = msg.chat.id.toString();
         const user = await getUserData(chatId, msg);
-        await sendRandomStickerFromList(chatId, matchingStickers, user);
+        await sendRandomStickerFromList(
+          chatId,
+          matchingStickers,
+          user,
+          userEmojis
+        );
       }
     }
   }
@@ -558,9 +569,7 @@ bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id.toString();
   const data = query.data;
 
-  if (data === "random_sticker") {
-    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
-  } else if (data.startsWith("send_again_")) {
+  if (data.startsWith("send_again_")) {
     const emojis = data.replace("send_again_", "");
     console.log(`Callback data: ${data}, Extracted emojis: ${emojis}`);
     await sendStickerAgain(chatId, emojis);
@@ -572,7 +581,7 @@ bot.on("callback_query", async (query) => {
     await sendInfo(chatId);
   }
 
-  bot.answerCallbackQuery(query.id);
+  await bot.answerCallbackQuery(query.id);
 });
 
 bot.setMyCommands([
