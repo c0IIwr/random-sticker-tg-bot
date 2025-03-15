@@ -95,6 +95,7 @@ const stickerPacks = [
   "gtrmogcr_by_stickrubot",
   "luvkit",
   "kitties4bynorufx_by_fStikBot",
+  "kittiesbynorufx_by_fStikBot",
   "kitee4ki_by_fStikBot",
   "stickersffkitty",
   "kittensticksmeow",
@@ -125,7 +126,12 @@ const stickerPacks = [
   "ktmrcats",
   "KitikiFavoritki_by_fStikBot",
   "PuppyAndKittyVoL1",
+  "PuppyAndKitty",
   "kitties2bynorufx_by_fStikBot",
+  "kitties5bynorufx_by_fStikBot",
+  "kitties6bynorufx_by_fStikBot",
+  "kitties7bynorufx_by_fStikBot",
+  "kitties8bynorufx_by_fStikBot",
   "wiksyua_by_fStikBot",
   "Kitts_chirpani",
   "kkkkiiitttyyy_by_fStikBot",
@@ -135,6 +141,8 @@ const stickerPacks = [
   "Shoobies",
   "bruh_Im_a_cat",
   "JackalCats",
+  "Cathifiho_by_favorite_stickers_bot",
+  "ChmonkiKotiki_by_fStikBot",
 ];
 
 let allStickers = [];
