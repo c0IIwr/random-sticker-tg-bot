@@ -2,7 +2,8 @@ const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const { MongoClient } = require("mongodb");
 const { google } = require("googleapis");
-const fs = require("fs");
+const emojiRegex = require("emoji-regex");
+const regex = emojiRegex();
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -302,62 +303,49 @@ async function updateUserDataInSheet(user) {
   }
 }
 
+function isOnlyEmojis(str) {
+  const matches = str.match(regex);
+  return matches && matches.join("") === str;
+}
+
+async function sendRandomStickerFromList(chatId, stickers, user) {
+  if (stickers.length === 0) {
+    bot.sendMessage(chatId, "Таких котиков нет 😔");
+    return;
+  }
+  const availableStickers = stickers.filter(
+    (s) => !user.sentStickers.includes(s.file_id)
+  );
+  if (availableStickers.length === 0) {
+    bot.sendMessage(chatId, "Все стикеры с этими эмодзи уже были отправлены!");
+    return;
+  }
+  const randomIndex = Math.floor(Math.random() * availableStickers.length);
+  const sticker = availableStickers[randomIndex];
+  user.sentStickers.push(sticker.file_id);
+  user.stickerCount = (user.stickerCount || 0) + 1;
+  user.lastSent = new Date();
+  if (!user.firstSent) user.firstSent = new Date();
+  await saveUserData(user);
+  updateUserDataInSheet(user).catch((error) => {
+    console.error("Ошибка при обновлении данных в Google Sheets:", error);
+  });
+  const buttonText = user.stickerCount === 1 ? "Отправить котика" : "Ещё котик";
+  const keyboard = {
+    keyboard: [[{ text: buttonText }]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+  await bot.sendSticker(chatId, sticker.file_id, {
+    reply_markup: JSON.stringify(keyboard),
+  });
+}
+
 async function sendSticker(msg) {
   try {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
-
-    if (!user.firstSent) user.firstSent = new Date();
-    user.lastSent = new Date();
-    user.stickerCount = (user.stickerCount || 0) + 1;
-
-    if (stickerPacks.length === 0) {
-      bot.sendMessage(chatId, "Нет доступных стикерпаков!");
-      return;
-    }
-
-    let availablePacks = stickerPacks.filter((pack) => {
-      const stickers = allStickers.filter((s) => s.set_name === pack);
-      const availableStickers = stickers.filter(
-        (s) => !user.sentStickers.includes(s.file_id)
-      );
-      return availableStickers.length > 0;
-    });
-
-    if (availablePacks.length === 0) {
-      bot.sendMessage(chatId, "Все стикеры уже были отправлены!");
-      return;
-    }
-
-    const randomPackIndex = Math.floor(Math.random() * availablePacks.length);
-    const randomPack = availablePacks[randomPackIndex];
-    const stickers = allStickers.filter((s) => s.set_name === randomPack);
-    const availableStickers = stickers.filter(
-      (s) => !user.sentStickers.includes(s.file_id)
-    );
-
-    const randomIndex = Math.floor(Math.random() * availableStickers.length);
-    const sticker = availableStickers[randomIndex];
-
-    user.sentStickers.push(sticker.file_id);
-    await saveUserData(user);
-
-    updateUserDataInSheet(user).catch((error) => {
-      console.error("Ошибка при обновлении данных в Google Sheets:", error);
-    });
-
-    const buttonText =
-      user.stickerCount === 1 ? "Отправить котика" : "Ещё котик";
-
-    const keyboard = {
-      keyboard: [[{ text: buttonText }]],
-      resize_keyboard: true,
-      one_time_keyboard: false,
-    };
-
-    await bot.sendSticker(chatId, sticker.file_id, {
-      reply_markup: JSON.stringify(keyboard),
-    });
+    await sendRandomStickerFromList(chatId, allStickers, user);
   } catch (error) {
     console.error("Ошибка в функции sendSticker:", error);
     bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
@@ -375,11 +363,9 @@ bot.onText(/\/reset/, async (msg) => {
     user.sentStickers = [];
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
-
     updateUserDataInSheet(user).catch((error) => {
       console.error("Ошибка при обновлении данных в Google Sheets:", error);
     });
-
     bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
@@ -397,7 +383,6 @@ bot.onText(/\/info/, async (msg) => {
     const remainingCount = stickerCount - sentCount;
     const percentageSent =
       stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
-
     bot.sendMessage(
       chatId,
       `Всего стикерпаков: ${packCount}\n` +
@@ -434,6 +419,21 @@ bot.onText(/\/start/, async (msg) => {
   await bot.sendMessage(chatId, "Нажмите кнопку, чтобы получить стикер", {
     reply_markup: JSON.stringify(keyboard),
   });
+});
+
+bot.on("message", async (msg) => {
+  if (msg.text && !msg.text.startsWith("/")) {
+    const text = msg.text.trim();
+    if (isOnlyEmojis(text)) {
+      const userEmojis = [...new Set(text.match(regex))];
+      const matchingStickers = allStickers.filter((sticker) =>
+        userEmojis.every((emoji) => sticker.emoji.includes(emoji))
+      );
+      const chatId = msg.chat.id.toString();
+      const user = await getUserData(chatId, msg);
+      await sendRandomStickerFromList(chatId, matchingStickers, user);
+    }
+  }
 });
 
 bot.setMyCommands([
