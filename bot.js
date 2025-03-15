@@ -153,7 +153,7 @@ async function loadStickers() {
 
 loadStickers();
 
-async function getUserData(chatId, msg) {
+async function getUserData(chatId, msg = {}) {
   let user = await usersCollection.findOne({ chatId: chatId.toString() });
   if (!user) {
     user = {
@@ -163,23 +163,27 @@ async function getUserData(chatId, msg) {
       resetCount: 0,
       firstSent: null,
       lastSent: null,
-      firstName: msg.from.first_name || "",
-      lastName: msg.from.last_name || "",
-      username: msg.from.username || "",
-      languageCode: msg.from.language_code || "",
-      chatType: msg.chat.type || "",
-      chatTitle: msg.chat.type !== "private" ? msg.chat.title || "" : "",
-      chatUsername: msg.chat.username || "",
+      firstName: msg.from?.first_name || "",
+      lastName: msg.from?.last_name || "",
+      username: msg.from?.username || "",
+      languageCode: msg.from?.language_code || "",
+      chatType: msg.chat?.type || "",
+      chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
+      chatUsername: msg.chat?.username || "",
     };
     await usersCollection.insertOne(user);
-  } else {
-    user.firstName = msg.from.first_name || "";
-    user.lastName = msg.from.last_name || "";
-    user.username = msg.from.username || "";
-    user.languageCode = msg.from.language_code || "";
-    user.chatType = msg.chat.type || "";
-    user.chatTitle = msg.chat.type !== "private" ? msg.chat.title || "" : "";
-    user.chatUsername = msg.chat.username || "";
+  } else if (msg.from || msg.chat) {
+    user.firstName = msg.from?.first_name || user.firstName || "";
+    user.lastName = msg.from?.last_name || user.lastName || "";
+    user.username = msg.from?.username || user.username || "";
+    user.languageCode = msg.from?.language_code || user.languageCode || "";
+    user.chatType = msg.chat?.type || user.chatType || "";
+    user.chatTitle =
+      msg.chat?.type !== "private"
+        ? msg.chat?.title || user.chatTitle || ""
+        : user.chatTitle || "";
+    user.chatUsername = msg.chat?.username || user.chatUsername || "";
+    await saveUserData(user);
   }
   return user;
 }
@@ -432,7 +436,7 @@ bot.onText(/\/kitty/, (msg) => {
 
 async function resetSentStickers(chatId) {
   try {
-    const user = await getUserData(chatId, { from: { id: chatId } });
+    const user = await getUserData(chatId);
     user.sentStickers = [];
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
@@ -467,7 +471,7 @@ bot.onText(/\/reset/, (msg) => {
 
 async function sendInfo(chatId) {
   try {
-    const user = await getUserData(chatId, { from: { id: chatId } });
+    const user = await getUserData(chatId);
     const packCount = stickerPacks.length;
     const stickerCount = allStickers.length;
     const sentCount = user.sentStickers.length;
@@ -550,12 +554,12 @@ bot.on("callback_query", async (query) => {
   const data = query.data;
 
   if (data === "random_sticker") {
-    await sendSticker({ chat: { id: chatId } });
+    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   } else if (data.startsWith("send_again_")) {
     const emojis = data.split("_").slice(2).join("_");
     await sendStickerAgain(chatId, emojis);
   } else if (data === "retry_sendSticker") {
-    await sendSticker({ chat: { id: chatId } });
+    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   } else if (data === "retry_reset") {
     await resetSentStickers(chatId);
   } else if (data === "retry_info") {
