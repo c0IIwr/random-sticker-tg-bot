@@ -323,7 +323,7 @@ async function sendStickerAgain(chatId, emojis) {
     return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
   });
   if (matchingStickers.length === 0) {
-    bot.sendMessage(chatId, "Таких котиков нет 😔");
+    await bot.sendMessage(chatId, "Таких котиков нет 😔");
     return;
   }
   const randomIndex = Math.floor(Math.random() * matchingStickers.length);
@@ -556,7 +556,7 @@ bot.on("callback_query", async (query) => {
   if (data === "random_sticker") {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   } else if (data.startsWith("send_again_")) {
-    const emojis = data.split("_").slice(2).join("_");
+    const emojis = data.replace("send_again_", "");
     await sendStickerAgain(chatId, emojis);
   } else if (data === "retry_sendSticker") {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
