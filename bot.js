@@ -337,7 +337,8 @@ async function sendRandomStickerFromList(chatId, stickers, user) {
   updateUserDataInSheet(user).catch((error) => {
     console.error("Ошибка при обновлении данных в Google Sheets:", error);
   });
-  const buttonText = user.stickerCount === 1 ? "Отправить котика" : "Ещё котик";
+  const buttonText =
+    user.stickerCount === 1 ? "Отправить котика 🤗" : "Ещё котик 🤗";
   const keyboard = {
     keyboard: [[{ text: buttonText }]],
     resize_keyboard: true,
@@ -405,19 +406,20 @@ bot.onText(/\/info/, async (msg) => {
 
 bot.onText(/котик/i, (msg) => {
   const text = msg.text.toLowerCase();
-  if (text !== "отправить котика" && text !== "ещё котик") {
+  if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
     sendSticker(msg);
   }
 });
 
-bot.onText(/^(Отправить котика|Ещё котик)$/i, (msg) => {
+bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, (msg) => {
   sendSticker(msg);
 });
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
-  const buttonText = user.stickerCount === 0 ? "Отправить котика" : "Ещё котик";
+  const buttonText =
+    user.stickerCount === 0 ? "Отправить котика 🤗" : "Ещё котик 🤗";
   const keyboard = {
     keyboard: [[{ text: buttonText }]],
     resize_keyboard: true,
@@ -453,15 +455,15 @@ bot.on("message", async (msg) => {
 bot.setMyCommands([
   {
     command: "/kitty",
-    description: "Котик из случайного стикерпака",
+    description: "🤗 Котик из случайного стикерпака",
   },
   {
     command: "/reset",
-    description: "Сброс отправленных стикеров",
+    description: "❌ Сброс отправленных стикеров",
   },
   {
     command: "/info",
-    description: "Инфа о стикерпаках",
+    description: "📃 Инфа о стикерпаках",
   },
 ]);
 
