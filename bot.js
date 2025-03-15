@@ -429,14 +429,16 @@ bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {
     const text = msg.text.trim();
     if (isOnlyEmojis(text)) {
-      const userEmojis = [...new Set(text.match(regex))];
-      const matchingStickers = allStickers.filter((sticker) => {
-        const stickerEmojis = splitEmojis(sticker.emoji);
-        return userEmojis.every((emoji) => stickerEmojis.includes(emoji));
-      });
-      const chatId = msg.chat.id.toString();
-      const user = await getUserData(chatId, msg);
-      await sendRandomStickerFromList(chatId, matchingStickers, user);
+      const userEmojis = text.match(regex);
+      if (userEmojis && userEmojis.length > 0) {
+        const matchingStickers = allStickers.filter((sticker) => {
+          const stickerEmojis = splitEmojis(sticker.emoji);
+          return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
+        });
+        const chatId = msg.chat.id.toString();
+        const user = await getUserData(chatId, msg);
+        await sendRandomStickerFromList(chatId, matchingStickers, user);
+      }
     }
   }
 });
