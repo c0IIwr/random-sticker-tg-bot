@@ -308,6 +308,10 @@ function isOnlyEmojis(str) {
   return matches && matches.join("") === str;
 }
 
+function splitEmojis(str) {
+  return str.match(regex) || [];
+}
+
 async function sendRandomStickerFromList(chatId, stickers, user) {
   if (stickers.length === 0) {
     bot.sendMessage(chatId, "Таких котиков нет 😔");
@@ -426,9 +430,10 @@ bot.on("message", async (msg) => {
     const text = msg.text.trim();
     if (isOnlyEmojis(text)) {
       const userEmojis = [...new Set(text.match(regex))];
-      const matchingStickers = allStickers.filter((sticker) =>
-        userEmojis.every((emoji) => sticker.emoji.includes(emoji))
-      );
+      const matchingStickers = allStickers.filter((sticker) => {
+        const stickerEmojis = splitEmojis(sticker.emoji);
+        return userEmojis.every((emoji) => stickerEmojis.includes(emoji));
+      });
       const chatId = msg.chat.id.toString();
       const user = await getUserData(chatId, msg);
       await sendRandomStickerFromList(chatId, matchingStickers, user);
