@@ -569,9 +569,10 @@ bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id.toString();
   const data = query.data;
 
-  if (data.startsWith("send_again_")) {
+  if (data === "random_sticker") {
+    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
+  } else if (data.startsWith("send_again_")) {
     const emojis = data.replace("send_again_", "");
-    console.log(`Callback data: ${data}, Extracted emojis: ${emojis}`);
     await sendStickerAgain(chatId, emojis);
   } else if (data === "retry_sendSticker") {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
