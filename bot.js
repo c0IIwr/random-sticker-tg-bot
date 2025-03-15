@@ -321,7 +321,10 @@ async function sendRandomStickerFromList(chatId, stickers, user) {
     (s) => !user.sentStickers.includes(s.file_id)
   );
   if (availableStickers.length === 0) {
-    bot.sendMessage(chatId, "Все стикеры с этими эмодзи уже были отправлены!");
+    bot.sendMessage(
+      chatId,
+      "Все стикеры с этими эмодзи уже были отправлены 😔"
+    );
     return;
   }
   const randomIndex = Math.floor(Math.random() * availableStickers.length);
@@ -352,7 +355,7 @@ async function sendSticker(msg) {
     await sendRandomStickerFromList(chatId, allStickers, user);
   } catch (error) {
     console.error("Ошибка в функции sendSticker:", error);
-    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
+    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️");
   }
 }
 
@@ -370,10 +373,10 @@ bot.onText(/\/reset/, async (msg) => {
     updateUserDataInSheet(user).catch((error) => {
       console.error("Ошибка при обновлении данных в Google Sheets:", error);
     });
-    bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
+    bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍");
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
-    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
+    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️");
   }
 });
 
@@ -396,7 +399,7 @@ bot.onText(/\/info/, async (msg) => {
     );
   } catch (error) {
     console.error("Ошибка в команде /info:", error);
-    bot.sendMessage(msg.chat.id, "Произошла ошибка. Попробуйте позже.");
+    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️");
   }
 });
 
@@ -420,9 +423,13 @@ bot.onText(/\/start/, async (msg) => {
     resize_keyboard: true,
     one_time_keyboard: false,
   };
-  await bot.sendMessage(chatId, "Нажмите кнопку, чтобы получить стикер", {
-    reply_markup: JSON.stringify(keyboard),
-  });
+  await bot.sendMessage(
+    chatId,
+    "Нажмите кнопку, чтобы получить стикер с котиком 🤗",
+    {
+      reply_markup: JSON.stringify(keyboard),
+    }
+  );
 });
 
 bot.on("message", async (msg) => {
