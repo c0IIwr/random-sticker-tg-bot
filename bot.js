@@ -312,18 +312,67 @@ function splitEmojis(str) {
   return str.match(regex) || [];
 }
 
-async function sendRandomStickerFromList(chatId, stickers, user) {
-  if (stickers.length === 0) {
+async function sendStickerAgain(chatId, emojis) {
+  const userEmojis = emojis ? emojis.split(",") : [];
+  const matchingStickers = allStickers.filter((sticker) => {
+    const stickerEmojis = splitEmojis(sticker.emoji);
+    return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
+  });
+  if (matchingStickers.length === 0) {
     bot.sendMessage(chatId, "Таких котиков нет 😔");
+    return;
+  }
+  const randomIndex = Math.floor(Math.random() * matchingStickers.length);
+  const sticker = matchingStickers[randomIndex];
+  const buttonText = "Ещё котик 🤗";
+  const keyboard = {
+    keyboard: [[{ text: buttonText }]],
+    resize_keyboard: true,
+    one_time_keyboard: false,
+  };
+  await bot.sendSticker(chatId, sticker.file_id, {
+    reply_markup: JSON.stringify(keyboard),
+  });
+}
+
+async function sendRandomStickerFromList(
+  chatId,
+  stickers,
+  user,
+  emojis = null
+) {
+  if (stickers.length === 0) {
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
+      ],
+    };
+    bot.sendMessage(chatId, "Таких котиков нет 😔", {
+      reply_markup: JSON.stringify(keyboard),
+    });
     return;
   }
   const availableStickers = stickers.filter(
     (s) => !user.sentStickers.includes(s.file_id)
   );
   if (availableStickers.length === 0) {
+    const emojiString = emojis ? emojis.join(",") : "";
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "Всё равно отправить котика 🤗",
+            callback_data: `send_again_${emojiString}`,
+          },
+        ],
+      ],
+    };
     bot.sendMessage(
       chatId,
-      "Все стикеры с этими эмодзи уже были отправлены 😔"
+      "Все стикеры с этими эмодзи уже были отправлены 😔",
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
     );
     return;
   }
@@ -353,10 +402,27 @@ async function sendSticker(msg) {
   try {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
-    await sendRandomStickerFromList(chatId, allStickers, user);
+    const text = msg.text ? msg.text.trim() : "";
+    let stickers = allStickers;
+    let emojis = null;
+    if (isOnlyEmojis(text)) {
+      emojis = splitEmojis(text);
+      stickers = allStickers.filter((sticker) => {
+        const stickerEmojis = splitEmojis(sticker.emoji);
+        return emojis.some((emoji) => stickerEmojis.includes(emoji));
+      });
+    }
+    await sendRandomStickerFromList(chatId, stickers, user, emojis);
   } catch (error) {
     console.error("Ошибка в функции sendSticker:", error);
-    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️");
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Разбудить котят 🫣", callback_data: "retry_sendSticker" }],
+      ],
+    };
+    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️", {
+      reply_markup: JSON.stringify(keyboard),
+    });
   }
 }
 
@@ -364,27 +430,44 @@ bot.onText(/\/kitty/, (msg) => {
   sendSticker(msg);
 });
 
-bot.onText(/\/reset/, async (msg) => {
+async function resetSentStickers(chatId) {
   try {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
+    const user = await getUserData(chatId, { from: { id: chatId } });
     user.sentStickers = [];
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
     updateUserDataInSheet(user).catch((error) => {
       console.error("Ошибка при обновлении данных в Google Sheets:", error);
     });
-    bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍");
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
+      ],
+    };
+    bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍", {
+      reply_markup: JSON.stringify(keyboard),
+    });
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
-    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️");
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Разбудить котят 🫣", callback_data: "retry_reset" }],
+      ],
+    };
+    bot.sendMessage(chatId, "Котики спят 😴 Попробуйте позже ⌛️", {
+      reply_markup: JSON.stringify(keyboard),
+    });
   }
+}
+
+bot.onText(/\/reset/, (msg) => {
+  const chatId = msg.chat.id.toString();
+  resetSentStickers(chatId);
 });
 
-bot.onText(/\/info/, async (msg) => {
+async function sendInfo(chatId) {
   try {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
+    const user = await getUserData(chatId, { from: { id: chatId } });
     const packCount = stickerPacks.length;
     const stickerCount = allStickers.length;
     const sentCount = user.sentStickers.length;
@@ -400,8 +483,20 @@ bot.onText(/\/info/, async (msg) => {
     );
   } catch (error) {
     console.error("Ошибка в команде /info:", error);
-    bot.sendMessage(msg.chat.id, "Котики спят 😴 Попробуйте позже ⌛️");
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Разбудить котят 🫣", callback_data: "retry_info" }],
+      ],
+    };
+    bot.sendMessage(chatId, "Котики спят 😴 Попробуйте позже ⌛️", {
+      reply_markup: JSON.stringify(keyboard),
+    });
   }
+}
+
+bot.onText(/\/info/, (msg) => {
+  const chatId = msg.chat.id.toString();
+  sendInfo(chatId);
 });
 
 bot.onText(/котик/i, (msg) => {
@@ -418,12 +513,10 @@ bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, (
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
-  const buttonText =
-    user.stickerCount === 0 ? "Отправить котика 🤗" : "Ещё котик 🤗";
   const keyboard = {
-    keyboard: [[{ text: buttonText }]],
-    resize_keyboard: true,
-    one_time_keyboard: false,
+    inline_keyboard: [
+      [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
+    ],
   };
   await bot.sendMessage(
     chatId,
@@ -452,19 +545,30 @@ bot.on("message", async (msg) => {
   }
 });
 
+bot.on("callback_query", async (query) => {
+  const chatId = query.message.chat.id.toString();
+  const data = query.data;
+
+  if (data === "random_sticker") {
+    await sendSticker({ chat: { id: chatId } });
+  } else if (data.startsWith("send_again_")) {
+    const emojis = data.split("_").slice(2).join("_");
+    await sendStickerAgain(chatId, emojis);
+  } else if (data === "retry_sendSticker") {
+    await sendSticker({ chat: { id: chatId } });
+  } else if (data === "retry_reset") {
+    await resetSentStickers(chatId);
+  } else if (data === "retry_info") {
+    await sendInfo(chatId);
+  }
+
+  bot.answerCallbackQuery(query.id);
+});
+
 bot.setMyCommands([
-  {
-    command: "/kitty",
-    description: "🤗 Котик из случайного стикерпака",
-  },
-  {
-    command: "/reset",
-    description: "❌ Сброс отправленных стикеров",
-  },
-  {
-    command: "/info",
-    description: "📃 Инфа о стикерпаках",
-  },
+  { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
+  { command: "/reset", description: "❌ Сброс отправленных стикеров" },
+  { command: "/info", description: "📃 Инфа о стикерпаках" },
 ]);
 
 console.log("Бот запущен...");
