@@ -317,11 +317,21 @@ function splitEmojis(str) {
 }
 
 async function sendStickerAgain(chatId, emojis) {
-  const userEmojis = emojis ? emojis.split(",") : [];
+  if (!emojis || emojis.trim() === "") {
+    await bot.sendMessage(chatId, "Произошла ошибка: не указаны эмодзи.");
+    console.error("No emojis provided in sendStickerAgain");
+    return;
+  }
+  const userEmojis = emojis.split(",");
   const matchingStickers = allStickers.filter((sticker) => {
     const stickerEmojis = splitEmojis(sticker.emoji);
     return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
   });
+  if (matchingStickers.length === 0) {
+    await bot.sendMessage(chatId, "Не удалось найти стикеры с этими эмодзи 😔");
+    console.error(`No matching stickers found for emojis: ${emojis}`);
+    return;
+  }
   const randomIndex = Math.floor(Math.random() * matchingStickers.length);
   const sticker = matchingStickers[randomIndex];
   const keyboard = {
@@ -552,6 +562,7 @@ bot.on("callback_query", async (query) => {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   } else if (data.startsWith("send_again_")) {
     const emojis = data.replace("send_again_", "");
+    console.log(`Callback data: ${data}, Extracted emojis: ${emojis}`);
     await sendStickerAgain(chatId, emojis);
   } else if (data === "retry_sendSticker") {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
