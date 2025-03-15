@@ -317,20 +317,11 @@ function splitEmojis(str) {
 }
 
 async function sendStickerAgain(chatId, emojis) {
-  if (!emojis || emojis.trim() === "") {
-    await bot.sendMessage(chatId, "Произошла ошибка: не указаны эмодзи.");
-    console.error("No emojis provided in sendStickerAgain");
-    return;
-  }
-  const userEmojis = emojis.split(",");
+  const userEmojis = emojis ? emojis.split(",") : [];
   const matchingStickers = allStickers.filter((sticker) => {
     const stickerEmojis = splitEmojis(sticker.emoji);
     return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
   });
-  if (matchingStickers.length === 0) {
-    await bot.sendMessage(chatId, "Не удалось найти стикеры с этими эмодзи 😔");
-    return;
-  }
   const randomIndex = Math.floor(Math.random() * matchingStickers.length);
   const sticker = matchingStickers[randomIndex];
   const keyboard = {
@@ -364,31 +355,24 @@ async function sendRandomStickerFromList(
     (s) => !user.sentStickers.includes(s.file_id)
   );
   if (availableStickers.length === 0) {
-    if (emojis && emojis.length > 0) {
-      const emojiString = emojis.join(",");
-      const keyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: "Всё равно отправить котика 🤗",
-              callback_data: `send_again_${emojiString}`,
-            },
-          ],
+    const emojiString = emojis ? emojis.join(",") : "";
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "Всё равно отправить котика 🤗",
+            callback_data: `send_again_${emojiString}`,
+          },
         ],
-      };
-      bot.sendMessage(
-        chatId,
-        "Все стикеры с этими эмодзи уже были отправлены 😔",
-        {
-          reply_markup: JSON.stringify(keyboard),
-        }
-      );
-    } else {
-      bot.sendMessage(
-        chatId,
-        "Все стикеры уже были отправлены. Попробуйте сбросить список командой /reset."
-      );
-    }
+      ],
+    };
+    bot.sendMessage(
+      chatId,
+      "Все стикеры с этими эмодзи уже были отправлены 😔",
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
+    );
     return;
   }
   const randomIndex = Math.floor(Math.random() * availableStickers.length);
@@ -546,7 +530,7 @@ bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {
     const text = msg.text.trim();
     if (isOnlyEmojis(text)) {
-      const userEmojis = text.match(/[\p{Emoji}]/gu);
+      const userEmojis = text.match(regex);
       if (userEmojis && userEmojis.length > 0) {
         const matchingStickers = allStickers.filter((sticker) => {
           const stickerEmojis = splitEmojis(sticker.emoji);
