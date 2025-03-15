@@ -322,15 +322,10 @@ async function sendStickerAgain(chatId, emojis) {
     const stickerEmojis = splitEmojis(sticker.emoji);
     return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
   });
-  if (matchingStickers.length === 0) {
-    await bot.sendMessage(chatId, "Таких котиков нет 😔");
-    return;
-  }
   const randomIndex = Math.floor(Math.random() * matchingStickers.length);
   const sticker = matchingStickers[randomIndex];
-  const buttonText = "Ещё котик 🤗";
   const keyboard = {
-    keyboard: [[{ text: buttonText }]],
+    keyboard: [[{ text: "Ещё котик 🤗" }]],
     resize_keyboard: true,
     one_time_keyboard: false,
   };
