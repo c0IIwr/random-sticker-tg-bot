@@ -220,7 +220,9 @@ async function updateUserDataInSheet(user) {
     chatType !== "private" && user.chatUsername
       ? `https://t.me/${user.chatUsername}`
       : "";
-  const stickerCount = user.stickerCount || 0;
+  const sentNow = user.sentStickers.length;
+  const totalSent = user.stickerCount || 0;
+  const stickerCountDisplay = `${sentNow} (${totalSent})`;
   const resetCount = user.resetCount || 0;
 
   const formatDate = (date) => {
@@ -258,7 +260,7 @@ async function updateUserDataInSheet(user) {
     chatType,
     chatTitle,
     chatLink,
-    stickerCount,
+    stickerCount: stickerCountDisplay,
     resetCount,
     firstSent,
     lastSent,
@@ -339,7 +341,10 @@ async function sendSticker(msg) {
 
     user.sentStickers.push(sticker.file_id);
     await saveUserData(user);
-    await updateUserDataInSheet(user);
+
+    updateUserDataInSheet(user).catch((error) => {
+      console.error("Ошибка при обновлении данных в Google Sheets:", error);
+    });
 
     const buttonText =
       user.stickerCount === 1 ? "Отправить котика" : "Ещё котик";
@@ -370,7 +375,11 @@ bot.onText(/\/reset/, async (msg) => {
     user.sentStickers = [];
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
-    await updateUserDataInSheet(user);
+
+    updateUserDataInSheet(user).catch((error) => {
+      console.error("Ошибка при обновлении данных в Google Sheets:", error);
+    });
+
     bot.sendMessage(chatId, "Список отправленных стикеров сброшен!");
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
