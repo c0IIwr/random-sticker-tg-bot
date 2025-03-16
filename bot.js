@@ -4,6 +4,8 @@ const { MongoClient } = require("mongodb");
 const { google } = require("googleapis");
 const emojiRegex = require("emoji-regex");
 const regex = emojiRegex();
+const stickerPacks = require("./stickerPacks");
+const movies = require("./movies");
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -58,93 +60,6 @@ const auth = new google.auth.GoogleAuth({
 const sheets = google.sheets({ version: "v4", auth });
 const spreadsheetId = process.env.SPREADSHEET_ID;
 
-const stickerPacks = [
-  "psihomem_by_fStikBot",
-  "Bigkittypack",
-  "yoo3_by_fStikBot",
-  "tinycatss",
-  "Nekonyaaaa",
-  "meowmeowk07_by_fStikBot",
-  "fork_art_k_by_fStikBot",
-  "StellarCats",
-  "tenerezze1",
-  "newyearcats_by_TgEmojiBot",
-  "Kittyppsps_by_stkpbot",
-  "hpospwgq_by_stickrubot",
-  "YHITVNT_by_stikers_du_ark_bot",
-  "GrustnoMeow",
-  "blbbykqzcr_by_e4zybot",
-  "guRlYsx_by_achestickbot",
-  "set_481_by_makestick3_bot",
-  "aanimols",
-  "LoveeMeow",
-  "tenerezze4",
-  "UOSTAJR_by_stikers_du_ark_bot",
-  "KORAGOM_by_stikers_du_ark_bot",
-  "AMFOBYA_by_stikers_du_ark_bot",
-  "BCNWDHG_by_stikers_du_ark_bot",
-  "ANVRZVO_by_stikers_du_ark_bot",
-  "ZGYNRXJ_by_stikers_du_ark_bot",
-  "RBTOECR_by_stikers_du_ark_bot",
-  "KXKWMXD_by_stikers_du_ark_bot",
-  "UBFIUZF_by_stikers_du_ark_bot",
-  "BCZQQBZ_by_stikers_du_ark_bot",
-  "ultica",
-  "eomhxvyc_by_stickrubot",
-  "viexafqf_by_stickrubot",
-  "gtrmogcr_by_stickrubot",
-  "luvkit",
-  "kitties4bynorufx_by_fStikBot",
-  "kittiesbynorufx_by_fStikBot",
-  "kitee4ki_by_fStikBot",
-  "stickersffkitty",
-  "kittensticksmeow",
-  "Pussy_Cars",
-  "ilkvv",
-  "BkycnoCats",
-  "kartino4ki_lubvi",
-  "catsunicmass",
-  "kittesss_by_stkpbot",
-  "PussysVideo",
-  "KOTIKI4000",
-  "monkey_cat_luna",
-  "EOROHIBABX_by_stikeri_stikeri_bot",
-  "randomcatssticks",
-  "v232251114338541_by_StickerEdit_bot",
-  "spv_469d8135dd35291b6621c84ee1976cc2_by_stckrRobot",
-  "lapki_myak",
-  "nfKdpgPEuOEz_by_stickers_stealer_bot",
-  "mrktcats2",
-  "huisnth",
-  "Sukrumotion",
-  "CATTOOOOOO",
-  "anyaandkatyapm",
-  "kotikinu",
-  "jajjajjaj_by_fStikBot",
-  "yulechkinpack_by_fStikBot",
-  "kitikitiymeow_by_fStikBot",
-  "ktmrcats",
-  "KitikiFavoritki_by_fStikBot",
-  "PuppyAndKittyVoL1",
-  "PuppyAndKitty",
-  "kitties2bynorufx_by_fStikBot",
-  "kitties5bynorufx_by_fStikBot",
-  "kitties6bynorufx_by_fStikBot",
-  "kitties7bynorufx_by_fStikBot",
-  "kitties8bynorufx_by_fStikBot",
-  "wiksyua_by_fStikBot",
-  "Kitts_chirpani",
-  "kkkkiiitttyyy_by_fStikBot",
-  "Y_F_H_by_fStikBot",
-  "kdr44",
-  "Pussy_cars2",
-  "Shoobies",
-  "bruh_Im_a_cat",
-  "JackalCats",
-  "Cathifiho_by_favorite_stickers_bot",
-  "ChmonkiKotiki_by_fStikBot",
-];
-
 let allStickers = [];
 
 async function loadStickers() {
@@ -170,7 +85,7 @@ async function getUserData(chatId, msg = {}) {
       stickerCount: 0,
       resetCount: 0,
       movieCount: 0,
-      movieSent: false,
+      sentMovies: [],
       allStickersSent: false,
       firstSent: null,
       lastSent: null,
@@ -208,7 +123,7 @@ async function saveUserData(user) {
         stickerCount: user.stickerCount,
         resetCount: user.resetCount,
         movieCount: user.movieCount,
-        movieSent: user.movieSent,
+        sentMovies: user.sentMovies,
         allStickersSent: user.allStickersSent,
         firstSent: user.firstSent,
         lastSent: user.lastSent,
@@ -352,6 +267,19 @@ async function sendStickerAgain(chatId, emojis) {
   });
 }
 
+async function getRandomMovie(user) {
+  const availableMovies = movies.filter(
+    (movie) => !user.sentMovies.includes(movie.title)
+  );
+  if (availableMovies.length === 0) {
+    user.sentMovies = [];
+    await saveUserData(user);
+    return getRandomMovie(user);
+  }
+  const randomIndex = Math.floor(Math.random() * availableMovies.length);
+  return availableMovies[randomIndex];
+}
+
 async function sendRandomStickerFromList(
   chatId,
   stickers,
@@ -376,37 +304,36 @@ async function sendRandomStickerFromList(
 
   if (availableStickers.length === 0) {
     if (emojis === null) {
-      if (!user.movieSent) {
-        const photoUrl =
-          "https://kinopoiskapiunofficial.tech/images/posters/kp/462582.jpg";
+      if (!user.allStickersSent) {
+        const movie = await getRandomMovie(user);
         const caption = `
-<b>Облачно с прояснениями</b>
+<b>${movie.title}</b>
 
-<b>Год выпуска:</b> 2009
-<b>Оригинальное название:</b> Partly Cloudy
-<b>Страна производства:</b> США
-<b>Жанры:</b> фэнтези, комедия, мультфильм, семейный, короткометражка
-<b>Продолжительность:</b> 6 мин.
+<b>Год выпуска:</b> ${movie.year}
+<b>Оригинальное название:</b> ${movie.originalTitle}
+<b>Страна производства:</b> ${movie.country}
+<b>Жанры:</b> ${movie.genres}
+<b>Продолжительность:</b> ${movie.duration}
 
-Аисты приносят детей людям, животным, рыбам, а замечательных деток интересными способами делают облака. Все делают милых и пушистых детей, но есть одно облако, которое отличается от остальных облаков.
+${movie.description}
         `.trim();
         const movieKeyboard = {
           inline_keyboard: [
             [
               {
                 text: "Смотреть 🎥",
-                url: "https://reyohoho.github.io/reyohoho/movie/462582",
+                url: movie.watchUrl,
               },
             ],
           ],
         };
-        await bot.sendPhoto(chatId, photoUrl, {
+        await bot.sendPhoto(chatId, movie.posterUrl, {
           caption: caption,
           parse_mode: "HTML",
           reply_markup: JSON.stringify(movieKeyboard),
         });
 
-        user.movieSent = true;
+        user.sentMovies.push(movie.title);
         user.movieCount = (user.movieCount || 0) + 1;
         user.allStickersSent = true;
         await saveUserData(user);
@@ -508,7 +435,6 @@ async function resetSentStickers(chatId, silent = false) {
   try {
     const user = await getUserData(chatId);
     user.sentStickers = [];
-    user.movieSent = false;
     user.allStickersSent = false;
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
@@ -552,15 +478,20 @@ async function sendInfo(chatId) {
     const remainingCount = stickerCount - sentCount;
     const percentageSent =
       stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
+
     let infoMessage =
-      `Всего стикерпаков: ${packCount}\n` +
-      `Всего стикеров: ${stickerCount}\n` +
-      `Отправлено стикеров: ${sentCount} (${percentageSent}%)\n` +
-      `Осталось стикеров: ${remainingCount}`;
+      `<b>Всего стикерпаков:</b> ${packCount}<br>` +
+      `<b>Всего стикеров:</b> ${stickerCount}<br>` +
+      `<b>Отправлено стикеров:</b> ${sentCount} (${percentageSent}%)<br>` +
+      `<b>Осталось стикеров:</b> ${remainingCount}`;
+
     if (user.movieCount > 0) {
-      infoMessage += `\nПросмотрено мультиков: ${user.movieCount}`;
+      infoMessage += `<br><b>Просмотрено мультиков:</b> ${user.movieCount}`;
+    } else {
+      infoMessage += `<br><br><i><spoiler>Говорят, если закончатся стикеры, то покажут мультик 🤭</spoiler></i>`;
     }
-    bot.sendMessage(chatId, infoMessage);
+
+    bot.sendMessage(chatId, infoMessage, { parse_mode: "HTML" });
   } catch (error) {
     console.error("Ошибка в команде /info:", error);
     const keyboard = {
