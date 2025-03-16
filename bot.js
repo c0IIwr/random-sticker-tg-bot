@@ -344,12 +344,12 @@ ${movie.description}
 
       const resetKeyboard = {
         inline_keyboard: [
-          [{ text: "Начать сначала 🙃", callback_data: "reset_and_send" }],
+          [{ text: "Начать сначала 😇", callback_data: "reset_and_send" }],
         ],
       };
       await bot.sendMessage(
         chatId,
-        "Ух тыы 😲 Ты умничка 🤗 Все стикеры кончились!",
+        "Поздравляю! 🎉 Ты умничка 🤗 Все стикеры кончились 🔥",
         {
           reply_markup: JSON.stringify(resetKeyboard),
         }
