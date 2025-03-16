@@ -480,15 +480,15 @@ async function sendInfo(chatId) {
       stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
 
     let infoMessage =
-      `<b>Всего стикерпаков:</b> ${packCount}<br>` +
-      `<b>Всего стикеров:</b> ${stickerCount}<br>` +
-      `<b>Отправлено стикеров:</b> ${sentCount} (${percentageSent}%)<br>` +
+      `<b>Всего стикерпаков:</b> ${packCount}\n` +
+      `<b>Всего стикеров:</b> ${stickerCount}\n` +
+      `<b>Отправлено стикеров:</b> ${sentCount} (${percentageSent}%)\n` +
       `<b>Осталось стикеров:</b> ${remainingCount}`;
 
     if (user.movieCount > 0) {
-      infoMessage += `<br><b>Просмотрено мультиков:</b> ${user.movieCount}`;
+      infoMessage += `\n<b>Просмотрено мультиков:</b> ${user.movieCount}`;
     } else {
-      infoMessage += `<br><br><i><spoiler>Говорят, если закончатся стикеры, то покажут мультик 🤭</spoiler></i>`;
+      infoMessage += `\n\n<i><tg-spoiler>Говорят, если закончатся стикеры, то покажут мультик 🤭</tg-spoiler></i>`;
     }
 
     bot.sendMessage(chatId, infoMessage, { parse_mode: "HTML" });
