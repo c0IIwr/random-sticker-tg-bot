@@ -171,6 +171,7 @@ async function getUserData(chatId, msg = {}) {
       resetCount: 0,
       movieCount: 0,
       movieSent: false,
+      allStickersSent: false,
       firstSent: null,
       lastSent: null,
       firstName: msg.from?.first_name || "",
@@ -208,6 +209,7 @@ async function saveUserData(user) {
         resetCount: user.resetCount,
         movieCount: user.movieCount,
         movieSent: user.movieSent,
+        allStickersSent: user.allStickersSent,
         firstSent: user.firstSent,
         lastSent: user.lastSent,
         firstName: user.firstName,
@@ -367,14 +369,17 @@ async function sendRandomStickerFromList(
     });
     return;
   }
+
   const availableStickers = stickers.filter(
     (s) => !user.sentStickers.includes(s.file_id)
   );
+
   if (availableStickers.length === 0) {
-    if (emojis === null && !user.movieSent) {
-      const photoUrl =
-        "https://kinopoiskapiunofficial.tech/images/posters/kp/462582.jpg";
-      const caption = `
+    if (emojis === null) {
+      if (!user.movieSent) {
+        const photoUrl =
+          "https://kinopoiskapiunofficial.tech/images/posters/kp/462582.jpg";
+        const caption = `
 <b>Облачно с прояснениями</b>
 
 <b>Год выпуска:</b> 2009
@@ -384,22 +389,31 @@ async function sendRandomStickerFromList(
 <b>Продолжительность:</b> 6 мин.
 
 Аисты приносят детей людям, животным, рыбам, а замечательных деток интересными способами делают облака. Все делают милых и пушистых детей, но есть одно облако, которое отличается от остальных облаков.
-      `.trim();
-      const movieKeyboard = {
-        inline_keyboard: [
-          [
-            {
-              text: "Смотреть 🎥",
-              url: "https://reyohoho.github.io/reyohoho/movie/462582",
-            },
+        `.trim();
+        const movieKeyboard = {
+          inline_keyboard: [
+            [
+              {
+                text: "Смотреть 🎥",
+                url: "https://reyohoho.github.io/reyohoho/movie/462582",
+              },
+            ],
           ],
-        ],
-      };
-      await bot.sendPhoto(chatId, photoUrl, {
-        caption: caption,
-        parse_mode: "HTML",
-        reply_markup: JSON.stringify(movieKeyboard),
-      });
+        };
+        await bot.sendPhoto(chatId, photoUrl, {
+          caption: caption,
+          parse_mode: "HTML",
+          reply_markup: JSON.stringify(movieKeyboard),
+        });
+
+        user.movieSent = true;
+        user.movieCount = (user.movieCount || 0) + 1;
+        user.allStickersSent = true;
+        await saveUserData(user);
+        updateUserDataInSheet(user).catch((error) => {
+          console.error("Ошибка при обновлении данных в Google Sheets:", error);
+        });
+      }
 
       const resetKeyboard = {
         inline_keyboard: [
@@ -408,19 +422,12 @@ async function sendRandomStickerFromList(
       };
       await bot.sendMessage(
         chatId,
-        "Ух тыы 😲 Ты умничка 🤗 Все стикеры кончились, а вот и мультик - как и обещал 😁",
+        "Ух тыы 😲 Ты умничка 🤗 Все стикеры кончились!",
         {
           reply_markup: JSON.stringify(resetKeyboard),
         }
       );
-
-      user.movieSent = true;
-      user.movieCount = (user.movieCount || 0) + 1;
-      await saveUserData(user);
-      await updateUserDataInSheet(user).catch((error) => {
-        console.error("Ошибка при обновлении данных в Google Sheets:", error);
-      });
-    } else if (emojis !== null) {
+    } else {
       const emojiString = emojis ? emojis.join(",") : "";
       const keyboard = {
         inline_keyboard: [
@@ -442,6 +449,7 @@ async function sendRandomStickerFromList(
     }
     return;
   }
+
   const randomIndex = Math.floor(Math.random() * availableStickers.length);
   const sticker = availableStickers[randomIndex];
   user.sentStickers.push(sticker.file_id);
@@ -449,7 +457,7 @@ async function sendRandomStickerFromList(
   user.lastSent = new Date();
   if (!user.firstSent) user.firstSent = new Date();
   await saveUserData(user);
-  await updateUserDataInSheet(user).catch((error) => {
+  updateUserDataInSheet(user).catch((error) => {
     console.error("Ошибка при обновлении данных в Google Sheets:", error);
   });
   const buttonText =
@@ -501,9 +509,10 @@ async function resetSentStickers(chatId, silent = false) {
     const user = await getUserData(chatId);
     user.sentStickers = [];
     user.movieSent = false;
+    user.allStickersSent = false;
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
-    await updateUserDataInSheet(user).catch((error) => {
+    updateUserDataInSheet(user).catch((error) => {
       console.error("Ошибка при обновлении данных в Google Sheets:", error);
     });
     if (!silent) {
