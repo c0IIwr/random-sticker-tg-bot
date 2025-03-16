@@ -62,18 +62,6 @@ const spreadsheetId = process.env.SPREADSHEET_ID;
 
 let allStickers = [];
 
-async function migrateUserData() {
-  const users = await usersCollection.find().toArray();
-  for (const user of users) {
-    if (!Array.isArray(user.sentMovies)) {
-      user.sentMovies = [];
-      await saveUserData(user);
-    }
-  }
-}
-
-migrateUserData().catch(console.error);
-
 async function loadStickers() {
   for (const pack of stickerPacks) {
     try {
