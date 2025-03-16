@@ -169,6 +169,8 @@ async function getUserData(chatId, msg = {}) {
       sentStickers: [],
       stickerCount: 0,
       resetCount: 0,
+      movieCount: 0,
+      movieSent: false,
       firstSent: null,
       lastSent: null,
       firstName: msg.from?.first_name || "",
@@ -204,6 +206,8 @@ async function saveUserData(user) {
         sentStickers: user.sentStickers,
         stickerCount: user.stickerCount,
         resetCount: user.resetCount,
+        movieCount: user.movieCount,
+        movieSent: user.movieSent,
         firstSent: user.firstSent,
         lastSent: user.lastSent,
         firstName: user.firstName,
@@ -239,6 +243,7 @@ async function updateUserDataInSheet(user) {
   const totalSent = user.stickerCount || 0;
   const stickerCountDisplay = `${sentNow} (${totalSent})`;
   const resetCount = user.resetCount || 0;
+  const movieCount = user.movieCount || 0;
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -277,6 +282,7 @@ async function updateUserDataInSheet(user) {
     chatLink,
     stickerCount: stickerCountDisplay,
     resetCount,
+    movieCount,
     firstSent,
     lastSent,
   };
@@ -365,7 +371,7 @@ async function sendRandomStickerFromList(
     (s) => !user.sentStickers.includes(s.file_id)
   );
   if (availableStickers.length === 0) {
-    if (emojis === null) {
+    if (emojis === null && !user.movieSent) {
       const photoUrl =
         "https://kinopoiskapiunofficial.tech/images/posters/kp/462582.jpg";
       const caption = `
@@ -407,7 +413,14 @@ async function sendRandomStickerFromList(
           reply_markup: JSON.stringify(resetKeyboard),
         }
       );
-    } else {
+
+      user.movieSent = true;
+      user.movieCount = (user.movieCount || 0) + 1;
+      await saveUserData(user);
+      await updateUserDataInSheet(user).catch((error) => {
+        console.error("Ошибка при обновлении данных в Google Sheets:", error);
+      });
+    } else if (emojis !== null) {
       const emojiString = emojis ? emojis.join(",") : "";
       const keyboard = {
         inline_keyboard: [
@@ -436,7 +449,7 @@ async function sendRandomStickerFromList(
   user.lastSent = new Date();
   if (!user.firstSent) user.firstSent = new Date();
   await saveUserData(user);
-  updateUserDataInSheet(user).catch((error) => {
+  await updateUserDataInSheet(user).catch((error) => {
     console.error("Ошибка при обновлении данных в Google Sheets:", error);
   });
   const buttonText =
@@ -483,23 +496,26 @@ bot.onText(/\/kitty/, (msg) => {
   sendSticker(msg);
 });
 
-async function resetSentStickers(chatId) {
+async function resetSentStickers(chatId, silent = false) {
   try {
     const user = await getUserData(chatId);
     user.sentStickers = [];
+    user.movieSent = false;
     user.resetCount = (user.resetCount || 0) + 1;
     await saveUserData(user);
-    updateUserDataInSheet(user).catch((error) => {
+    await updateUserDataInSheet(user).catch((error) => {
       console.error("Ошибка при обновлении данных в Google Sheets:", error);
     });
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
-      ],
-    };
-    bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍", {
-      reply_markup: JSON.stringify(keyboard),
-    });
+    if (!silent) {
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
+        ],
+      };
+      bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍", {
+        reply_markup: JSON.stringify(keyboard),
+      });
+    }
   } catch (error) {
     console.error("Ошибка в команде /reset:", error);
     const keyboard = {
@@ -527,13 +543,15 @@ async function sendInfo(chatId) {
     const remainingCount = stickerCount - sentCount;
     const percentageSent =
       stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
-    bot.sendMessage(
-      chatId,
+    let infoMessage =
       `Всего стикерпаков: ${packCount}\n` +
-        `Всего стикеров: ${stickerCount}\n` +
-        `Отправлено стикеров: ${sentCount} (${percentageSent}%)\n` +
-        `Осталось стикеров: ${remainingCount}`
-    );
+      `Всего стикеров: ${stickerCount}\n` +
+      `Отправлено стикеров: ${sentCount} (${percentageSent}%)\n` +
+      `Осталось стикеров: ${remainingCount}`;
+    if (user.movieCount > 0) {
+      infoMessage += `\nПросмотрено мультиков: ${user.movieCount}`;
+    }
+    bot.sendMessage(chatId, infoMessage);
   } catch (error) {
     console.error("Ошибка в команде /info:", error);
     const keyboard = {
@@ -619,7 +637,7 @@ bot.on("callback_query", async (query) => {
   } else if (data === "retry_info") {
     await sendInfo(chatId);
   } else if (data === "reset_and_send") {
-    await resetSentStickers(chatId);
+    await resetSentStickers(chatId, true);
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   }
 
