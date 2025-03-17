@@ -6,7 +6,6 @@ const emojiRegex = require("emoji-regex");
 const regex = emojiRegex();
 const stickerPacks = require("./stickerPacks");
 const movies = require("./movies");
-require("./hello")(bot, usersCollection, allStickers);
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -584,6 +583,8 @@ bot.on("callback_query", async (query) => {
 
   await bot.answerCallbackQuery(query.id);
 });
+
+require("./hello")(bot, usersCollection, allStickers);
 
 bot.setMyCommands([
   { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
