@@ -1,4 +1,5 @@
 module.exports = [
+  "GrustnoMeow",
   "psihomem_by_fStikBot",
   "Bigkittypack",
   "yoo3_by_fStikBot",
@@ -12,7 +13,6 @@ module.exports = [
   "Kittyppsps_by_stkpbot",
   "hpospwgq_by_stickrubot",
   "YHITVNT_by_stikers_du_ark_bot",
-  "GrustnoMeow",
   "blbbykqzcr_by_e4zybot",
   "guRlYsx_by_achestickbot",
   "set_481_by_makestick3_bot",
@@ -83,4 +83,5 @@ module.exports = [
   "JackalCats",
   "Cathifiho_by_favorite_stickers_bot",
   "ChmonkiKotiki_by_fStikBot",
+  "catsmeowmeowmeowmeowmwo_by_fStikBot",
 ];
