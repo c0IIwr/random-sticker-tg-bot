@@ -1,3 +1,4 @@
+require("./hello")(bot, usersCollection, allStickers);
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const { MongoClient } = require("mongodb");
@@ -588,6 +589,7 @@ bot.setMyCommands([
   { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
   { command: "/reset", description: "❌ Сброс отправленных стикеров" },
   { command: "/info", description: "📃 Инфа о стикерпаках" },
+  { command: "/hello", description: "👋 Познакомиться" },
 ]);
 
 console.log("Бот запущен...");
