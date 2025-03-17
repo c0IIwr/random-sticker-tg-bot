@@ -1,4 +1,3 @@
-require("./hello")(bot, usersCollection, allStickers);
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const { MongoClient } = require("mongodb");
@@ -7,6 +6,7 @@ const emojiRegex = require("emoji-regex");
 const regex = emojiRegex();
 const stickerPacks = require("./stickerPacks");
 const movies = require("./movies");
+require("./hello")(bot, usersCollection, allStickers);
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
