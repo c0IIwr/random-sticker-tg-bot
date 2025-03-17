@@ -584,13 +584,10 @@ bot.on("callback_query", async (query) => {
   await bot.answerCallbackQuery(query.id);
 });
 
-require("./hello")(bot, usersCollection, allStickers);
-
 bot.setMyCommands([
   { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
   { command: "/reset", description: "❌ Сброс отправленных стикеров" },
   { command: "/info", description: "📃 Инфа о стикерпаках" },
-  { command: "/hello", description: "👋 Познакомиться" },
 ]);
 
 console.log("Бот запущен...");
