@@ -151,6 +151,12 @@ function setupGreetings(bot, usersCollection, allStickers) {
                   callback_data: "set_evening",
                 },
           ],
+          [
+            {
+              text: "Забыть имя 🙈",
+              callback_data: "forget_name",
+            },
+          ],
         ],
       };
 
@@ -256,6 +262,12 @@ function setupGreetings(bot, usersCollection, allStickers) {
                         callback_data: "set_evening",
                       },
                 ],
+                [
+                  {
+                    text: "Забыть имя 🙈",
+                    callback_data: "forget_name",
+                  },
+                ],
               ],
             };
 
@@ -263,16 +275,10 @@ function setupGreetings(bot, usersCollection, allStickers) {
               reply_markup: JSON.stringify(keyboard),
             });
           } else {
-            await bot.sendMessage(
-              chatId,
-              "Введи время в формате HH:MM, например, 08:00"
-            );
+            await bot.sendMessage(chatId, "Укажи время, например, 12:00");
           }
         } else {
-          await bot.sendMessage(
-            chatId,
-            "Введи время в формате HH:MM, например, 08:00"
-          );
+          await bot.sendMessage(chatId, "Укажи время, например, 12:00");
         }
       }
     }
@@ -286,14 +292,14 @@ function setupGreetings(bot, usersCollection, allStickers) {
     if (data === "set_morning") {
       await bot.sendMessage(
         chatId,
-        "Введи время для утреннего приветствия в формате HH:MM, например, 08:00. Можно указать часовой пояс, например, UTC+10 (по умолчанию UTC+3)."
+        "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
       );
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
       await bot.sendMessage(
         chatId,
-        "Введи время для вечернего приветствия в формате HH:MM, например, 22:00. Можно указать часовой пояс, например, UTC+10 (по умолчанию UTC+3)."
+        "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
       );
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
@@ -342,12 +348,43 @@ function setupGreetings(bot, usersCollection, allStickers) {
                   callback_data: "set_evening",
                 },
           ],
+          [
+            {
+              text: "Забыть имя 🙈",
+              callback_data: "forget_name",
+            },
+          ],
         ],
       };
 
       await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+    } else if (data === "forget_name") {
+      user.name = null;
+      user.state = "waiting_for_name";
+      await saveUserData(user);
+      const message = "Ты кто? 🤨";
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "Познакомиться 👋",
+              callback_data: "introduce",
+            },
+          ],
+        ],
+      };
+      await bot.sendMessage(chatId, message, {
+        reply_markup: JSON.stringify(keyboard),
+      });
+    } else if (data === "introduce") {
+      await bot.sendMessage(
+        chatId,
+        "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
+      );
+      user.state = "waiting_for_name";
+      await saveUserData(user);
     }
 
     await bot.answerCallbackQuery(query.id);
