@@ -229,7 +229,8 @@ function setupGreetings(bot, usersCollection, allStickers) {
               user,
               period.toLowerCase() === "утро" ? "morning" : "evening"
             );
-            let message = `${period} запланировано на ${timeStr}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+            const verb = period === "Утро" ? "запланировано" : "запланирована";
+            let message = `${period} ${verb} на ${timeStr}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
 
             const otherPeriod = period === "Утро" ? "Ночь" : "Утро";
             const otherTime =
@@ -239,9 +240,15 @@ function setupGreetings(bot, usersCollection, allStickers) {
                 user,
                 period === "Утро" ? "evening" : "morning"
               );
-              message += `\n${otherPeriod} запланирована на ${otherTime}${tzText} (осталось ${otherRemaining.hoursLeft}ч ${otherRemaining.minutesLeft}м)`;
+              const otherVerb =
+                otherPeriod === "Утро" ? "запланировано" : "запланирована";
+              message += `\n${otherPeriod} ${otherVerb} на ${otherTime}${tzText} (осталось ${otherRemaining.hoursLeft}ч ${otherRemaining.minutesLeft}м)`;
             } else {
-              message += `\n${otherPeriod} не запланирована`;
+              const otherVerb =
+                otherPeriod === "Утро"
+                  ? "не запланировано"
+                  : "не запланирована";
+              message += `\n${otherPeriod} ${otherVerb}`;
             }
 
             const keyboard = getKeyboard(user, false);
@@ -249,10 +256,10 @@ function setupGreetings(bot, usersCollection, allStickers) {
               reply_markup: JSON.stringify(keyboard),
             });
           } else {
-            await bot.sendMessage(chatId, "Укажи время, например, 12:00");
+            await bot.sendMessage(chatId, "Укажи время, например, 23:59");
           }
         } else {
-          await bot.sendMessage(chatId, "Укажи время, например, 12:00");
+          await bot.sendMessage(chatId, "Укажи время, например, 23:59");
         }
       }
     }
