@@ -98,6 +98,37 @@ function setupGreetings(bot, usersCollection, allStickers) {
     return { hoursLeft, minutesLeft };
   }
 
+  function getKeyboard(user, includeForgetName = false) {
+    const buttons = [
+      [
+        user.morningTime
+          ? {
+              text: "Сбросить время на утро 🌞",
+              callback_data: "reset_morning",
+            }
+          : { text: "Время просыпаться 🌞", callback_data: "set_morning" },
+        user.eveningTime
+          ? {
+              text: "Сбросить время на ночь 🌙",
+              callback_data: "reset_evening",
+            }
+          : {
+              text: "Время ложиться спать 🌙",
+              callback_data: "set_evening",
+            },
+      ],
+    ];
+    if (includeForgetName) {
+      buttons.push([
+        {
+          text: "Забыть имя 🙈",
+          callback_data: "forget_name",
+        },
+      ]);
+    }
+    return { inline_keyboard: buttons };
+  }
+
   bot.onText(/\/hello/, async (msg) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
@@ -132,34 +163,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         }
       }
 
-      const keyboard = {
-        inline_keyboard: [
-          [
-            user.morningTime
-              ? {
-                  text: "Сбросить время на утро 🌞",
-                  callback_data: "reset_morning",
-                }
-              : { text: "Время просыпаться 🌞", callback_data: "set_morning" },
-            user.eveningTime
-              ? {
-                  text: "Сбросить время на ночь 🌙",
-                  callback_data: "reset_evening",
-                }
-              : {
-                  text: "Время ложиться спать 🌙",
-                  callback_data: "set_evening",
-                },
-          ],
-          [
-            {
-              text: "Забыть имя 🙈",
-              callback_data: "forget_name",
-            },
-          ],
-        ],
-      };
-
+      const keyboard = getKeyboard(user, true);
       await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
@@ -240,37 +244,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
               message += `\n${otherPeriod} не запланирована`;
             }
 
-            const keyboard = {
-              inline_keyboard: [
-                [
-                  user.morningTime
-                    ? {
-                        text: "Сбросить время на утро 🌞",
-                        callback_data: "reset_morning",
-                      }
-                    : {
-                        text: "Время просыпаться 🌞",
-                        callback_data: "set_morning",
-                      },
-                  user.eveningTime
-                    ? {
-                        text: "Сбросить время на ночь 🌙",
-                        callback_data: "reset_evening",
-                      }
-                    : {
-                        text: "Время ложиться спать 🌙",
-                        callback_data: "set_evening",
-                      },
-                ],
-                [
-                  {
-                    text: "Забыть имя 🙈",
-                    callback_data: "forget_name",
-                  },
-                ],
-              ],
-            };
-
+            const keyboard = getKeyboard(user, false);
             await bot.sendMessage(chatId, message, {
               reply_markup: JSON.stringify(keyboard),
             });
@@ -329,34 +303,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         message += `\nНочь не запланирована`;
       }
 
-      const keyboard = {
-        inline_keyboard: [
-          [
-            user.morningTime
-              ? {
-                  text: "Сбросить время на утро 🌞",
-                  callback_data: "reset_morning",
-                }
-              : { text: "Время просыпаться 🌞", callback_data: "set_morning" },
-            user.eveningTime
-              ? {
-                  text: "Сбросить время на ночь 🌙",
-                  callback_data: "reset_evening",
-                }
-              : {
-                  text: "Время ложиться спать 🌙",
-                  callback_data: "set_evening",
-                },
-          ],
-          [
-            {
-              text: "Забыть имя 🙈",
-              callback_data: "forget_name",
-            },
-          ],
-        ],
-      };
-
+      const keyboard = getKeyboard(user, false);
       await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
