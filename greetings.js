@@ -284,30 +284,34 @@ function setupGreetings(bot, usersCollection, allStickers) {
       );
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
-    } else if (data === "reset_morning" || data === "reset_evening") {
-      if (data === "reset_morning") {
-        user.morningTime = null;
-      } else {
-        user.eveningTime = null;
-      }
+    } else if (data === "reset_morning") {
+      user.morningTime = null;
       await saveUserData(user);
 
-      let message = `Привет, ${user.name}! 🤗`;
-      const tz = user.timezone || "+03:00";
-      const tzText = formatTimezone(tz);
-
-      if (user.morningTime) {
-        const remaining = calculateRemainingTime(user, "morning");
-        message += `\nУтро запланировано на ${user.morningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
-      } else {
-        message += `\nУтро не запланировано`;
-      }
-
+      let message = "Время на утро сброшено";
       if (user.eveningTime) {
         const remaining = calculateRemainingTime(user, "evening");
+        const tzText = formatTimezone(user.timezone || "+03:00");
         message += `\nНочь запланирована на ${user.eveningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
       } else {
         message += `\nНочь не запланирована`;
+      }
+
+      const keyboard = getKeyboard(user, false);
+      await bot.sendMessage(chatId, message, {
+        reply_markup: JSON.stringify(keyboard),
+      });
+    } else if (data === "reset_evening") {
+      user.eveningTime = null;
+      await saveUserData(user);
+
+      let message = "Время на ночь сброшено";
+      if (user.morningTime) {
+        const remaining = calculateRemainingTime(user, "morning");
+        const tzText = formatTimezone(user.timezone || "+03:00");
+        message += `\nУтро запланировано на ${user.morningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+      } else {
+        message += `\nУтро не запланировано`;
       }
 
       const keyboard = getKeyboard(user, false);
