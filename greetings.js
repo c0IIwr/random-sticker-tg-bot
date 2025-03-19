@@ -362,6 +362,8 @@ function setupGreetings(bot, usersCollection, allStickers) {
       });
     } else if (data === "forget_name") {
       user.name = null;
+      user.morningTime = null;
+      user.eveningTime = null;
       user.state = "waiting_for_name";
       await saveUserData(user);
       const message = "Ты кто? 🤨";
