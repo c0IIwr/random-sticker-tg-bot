@@ -115,7 +115,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
       const tzText = formatTimezone(tz);
 
       if (!user.morningTime && !user.eveningTime) {
-        message += `\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идея? ☺️`;
+        message += `\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
       } else {
         if (user.morningTime) {
           const remaining = calculateRemainingTime(user, "morning");
@@ -170,7 +170,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         user.name = text;
         user.state = null;
         await saveUserData(user);
-        const message = `Привет, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идея? ☺️`;
+        const message = `Привет, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
         const keyboard = {
           inline_keyboard: [
             [
@@ -265,13 +265,13 @@ function setupGreetings(bot, usersCollection, allStickers) {
           } else {
             await bot.sendMessage(
               chatId,
-              "Неверный формат времени. Введите время в формате HH:MM, например, 08:00"
+              "Введи время в формате HH:MM, например, 08:00"
             );
           }
         } else {
           await bot.sendMessage(
             chatId,
-            "Неверный формат времени. Введите время в формате HH:MM, например, 08:00"
+            "Введи время в формате HH:MM, например, 08:00"
           );
         }
       }
@@ -286,14 +286,14 @@ function setupGreetings(bot, usersCollection, allStickers) {
     if (data === "set_morning") {
       await bot.sendMessage(
         chatId,
-        "Введите время для утреннего приветствия в формате HH:MM, например, 08:00. Можно указать часовой пояс, например, UTC+10 (по умолчанию UTC+3)."
+        "Введи время для утреннего приветствия в формате HH:MM, например, 08:00. Можно указать часовой пояс, например, UTC+10 (по умолчанию UTC+3)."
       );
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
       await bot.sendMessage(
         chatId,
-        "Введите время для вечернего приветствия в формате HH:MM, например, 22:00. Можно указать часовой пояс, например, UTC+10 (по умолчанию UTC+3)."
+        "Введи время для вечернего приветствия в формате HH:MM, например, 22:00. Можно указать часовой пояс, например, UTC+10 (по умолчанию UTC+3)."
       );
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
@@ -363,7 +363,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         user.morningTime &&
         nowInUserOffset.format("HH:mm") === user.morningTime
       ) {
-        await bot.sendMessage(user.chatId, `Доброе утро, ${user.name}! 🌞`);
+        await bot.sendMessage(user.chatId, `Доброе утречко, ${user.name}! 🌞`);
         const randomSticker =
           allStickers[Math.floor(Math.random() * allStickers.length)];
         try {
@@ -377,7 +377,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         user.eveningTime &&
         nowInUserOffset.format("HH:mm") === user.eveningTime
       ) {
-        await bot.sendMessage(user.chatId, `Спокойной ночи, ${user.name}! 🌙`);
+        await bot.sendMessage(user.chatId, `Спокойной ночки, ${user.name}! 🌙`);
         const randomSticker =
           allStickers[Math.floor(Math.random() * allStickers.length)];
         try {
