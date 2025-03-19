@@ -180,7 +180,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         user.name = text;
         user.state = null;
         await saveUserData(user);
-        const message = `Привет, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
+        const message = `Приятно познакомиться, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
         const keyboard = {
           inline_keyboard: [
             [
@@ -288,7 +288,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
       user.morningTime = null;
       await saveUserData(user);
 
-      let message = "Время на утро сброшено";
+      let message = "Время на утро сброшено 👍";
       if (user.eveningTime) {
         const remaining = calculateRemainingTime(user, "evening");
         const tzText = formatTimezone(user.timezone || "+03:00");
@@ -305,7 +305,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
       user.eveningTime = null;
       await saveUserData(user);
 
-      let message = "Время на ночь сброшено";
+      let message = "Время на ночь сброшено 👍";
       if (user.morningTime) {
         const remaining = calculateRemainingTime(user, "morning");
         const tzText = formatTimezone(user.timezone || "+03:00");

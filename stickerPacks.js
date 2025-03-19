@@ -84,4 +84,8 @@ module.exports = [
   "Cathifiho_by_favorite_stickers_bot",
   "ChmonkiKotiki_by_fStikBot",
   "catsmeowmeowmeowmeowmwo_by_fStikBot",
+  "Lilpussi2004",
+  "Kotyakot",
+  "kittysforlife_by_fStikBot",
+  "TREESHA_666_by_fStikBot",
 ];
