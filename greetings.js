@@ -2,6 +2,16 @@ const moment = require("moment-timezone");
 const cron = require("node-cron");
 
 function setupGreetings(bot, usersCollection, allStickers) {
+  function convertToOffset(timezone) {
+    if (timezone.startsWith("UTC")) {
+      const offset = timezone.slice(3);
+      const sign = offset[0];
+      const hours = parseInt(offset.slice(1), 10);
+      return `${sign}${hours.toString().padStart(2, "0")}:00`;
+    }
+    return timezone;
+  }
+
   async function getUserData(chatId, msg = {}) {
     let user = await usersCollection.findOne({ chatId: chatId.toString() });
     if (!user) {
@@ -91,15 +101,15 @@ function setupGreetings(bot, usersCollection, allStickers) {
           ],
         };
       } else {
-        const morningTimezone = user.morningTimezone || "UTC+3";
-        const eveningTimezone = user.eveningTimezone || "UTC+3";
+        const morningOffset = user.morningTimezone || "+03:00";
+        const eveningOffset = user.eveningTimezone || "+03:00";
 
-        const now = moment().tz(morningTimezone);
-        const morningTimeToday = moment
-          .tz(user.morningTime, "HH:mm", morningTimezone)
+        const now = moment().utcOffset(morningOffset);
+        const morningTimeToday = moment()
+          .utcOffset(morningOffset)
           .startOf("day")
-          .add(parseInt(user.morningTime.split(":")[0]), "hours")
-          .add(parseInt(user.morningTime.split(":")[1]), "minutes");
+          .hours(parseInt(user.morningTime.split(":")[0]))
+          .minutes(parseInt(user.morningTime.split(":")[1]));
         if (now.isAfter(morningTimeToday)) {
           morningTimeToday.add(1, "day");
         }
@@ -107,12 +117,12 @@ function setupGreetings(bot, usersCollection, allStickers) {
         const morningHours = Math.floor(morningDuration.asHours());
         const morningMinutes = Math.floor(morningDuration.asMinutes()) % 60;
 
-        const eveningNow = moment().tz(eveningTimezone);
-        const eveningTimeToday = moment
-          .tz(user.eveningTime, "HH:mm", eveningTimezone)
+        const eveningNow = moment().utcOffset(eveningOffset);
+        const eveningTimeToday = moment()
+          .utcOffset(eveningOffset)
           .startOf("day")
-          .add(parseInt(user.eveningTime.split(":")[0]), "hours")
-          .add(parseInt(user.eveningTime.split(":")[1]), "minutes");
+          .hours(parseInt(user.eveningTime.split(":")[0]))
+          .minutes(parseInt(user.eveningTime.split(":")[1]));
         if (eveningNow.isAfter(eveningTimeToday)) {
           eveningTimeToday.add(1, "day");
         }
@@ -122,8 +132,8 @@ function setupGreetings(bot, usersCollection, allStickers) {
         const eveningHours = Math.floor(eveningDuration.asHours());
         const eveningMinutes = Math.floor(eveningDuration.asMinutes()) % 60;
 
-        message += `\nУтро запланировано на ${user.morningTime} ${morningTimezone} (осталось ${morningHours}ч ${morningMinutes}м)`;
-        message += `\nНочь запланирована на ${user.eveningTime} ${eveningTimezone} (осталось ${eveningHours}ч ${eveningMinutes}м)`;
+        message += `\nУтро запланировано на ${user.morningTime} (UTC${morningOffset}) (осталось ${morningHours}ч ${morningMinutes}м)`;
+        message += `\nНочь запланирована на ${user.eveningTime} (UTC${eveningOffset}) (осталось ${eveningHours}ч ${eveningMinutes}м)`;
         keyboard = {
           inline_keyboard: [
             [
@@ -156,7 +166,6 @@ function setupGreetings(bot, usersCollection, allStickers) {
         user.name = text;
         user.state = null;
         await saveUserData(user);
-
         const message = `Привет, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идея? ☺️`;
         const keyboard = {
           inline_keyboard: [
@@ -179,35 +188,34 @@ function setupGreetings(bot, usersCollection, allStickers) {
         if (match) {
           const hours = parseInt(match[1], 10);
           const minutes = parseInt(match[2], 10);
-          const timezone = match[3] || "UTC+3";
+          const timezoneInput = match[3] || "UTC+3";
+          const offset = convertToOffset(timezoneInput);
 
           if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
             const timeStr = `${hours.toString().padStart(2, "0")}:${minutes
               .toString()
               .padStart(2, "0")}`;
-
             if (user.state === "waiting_for_morning_time") {
               user.morningTime = timeStr;
-              user.morningTimezone = timezone;
+              user.morningTimezone = offset;
               user.state = null;
             } else {
               user.eveningTime = timeStr;
-              user.eveningTimezone = timezone;
+              user.eveningTimezone = offset;
               user.state = null;
             }
             await saveUserData(user);
 
-            const isMorning =
-              user.state === null && user.morningTime === timeStr;
+            const isMorning = user.morningTime === timeStr;
             const tz = isMorning ? user.morningTimezone : user.eveningTimezone;
             const time = isMorning ? user.morningTime : user.eveningTime;
 
-            const now = moment().tz(tz);
-            const scheduledTimeToday = moment
-              .tz(time, "HH:mm", tz)
+            const now = moment().utcOffset(tz);
+            const scheduledTimeToday = moment()
+              .utcOffset(tz)
               .startOf("day")
-              .add(hours, "hours")
-              .add(minutes, "minutes");
+              .hours(hours)
+              .minutes(minutes);
             if (now.isAfter(scheduledTimeToday)) {
               scheduledTimeToday.add(1, "day");
             }
@@ -216,7 +224,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
             const minutesLeft = Math.floor(duration.asMinutes()) % 60;
 
             const period = isMorning ? "Утро" : "Ночь";
-            let message = `${period} запланировано на ${time} ${tz} (осталось ${hoursLeft}ч ${minutesLeft}м)`;
+            let message = `${period} запланировано на ${time} (UTC${tz}) (осталось ${hoursLeft}ч ${minutesLeft}м)`;
             let keyboard;
 
             if (user.morningTime && user.eveningTime) {
@@ -225,7 +233,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
                 ? user.eveningTimezone
                 : user.morningTimezone;
               const otherPeriod = isMorning ? "Ночь" : "Утро";
-              message += `\n${otherPeriod} запланировано на ${otherTime} ${otherTz}`;
+              message += `\n${otherPeriod} запланировано на ${otherTime} (UTC${otherTz})`;
               keyboard = {
                 inline_keyboard: [
                   [
@@ -334,12 +342,12 @@ function setupGreetings(bot, usersCollection, allStickers) {
           : user.morningTimezone;
         const period = isMorning ? "Ночь" : "Утро";
 
-        const now = moment().tz(remainingTz);
-        const scheduledTimeToday = moment
-          .tz(remainingTime, "HH:mm", remainingTz)
+        const now = moment().utcOffset(remainingTz);
+        const scheduledTimeToday = moment()
+          .utcOffset(remainingTz)
           .startOf("day")
-          .add(parseInt(remainingTime.split(":")[0]), "hours")
-          .add(parseInt(remainingTime.split(":")[1]), "minutes");
+          .hours(parseInt(remainingTime.split(":")[0]))
+          .minutes(parseInt(remainingTime.split(":")[1]));
         if (now.isAfter(scheduledTimeToday)) {
           scheduledTimeToday.add(1, "day");
         }
@@ -347,7 +355,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         const hoursLeft = Math.floor(duration.asHours());
         const minutesLeft = Math.floor(duration.asMinutes()) % 60;
 
-        message += `\n${period} запланировано на ${remainingTime} ${remainingTz} (осталось ${hoursLeft}ч ${minutesLeft}м)`;
+        message += `\n${period} запланировано на ${remainingTime} (UTC${remainingTz}) (осталось ${hoursLeft}ч ${minutesLeft}м)`;
         keyboard = {
           inline_keyboard: [
             [
@@ -378,40 +386,46 @@ function setupGreetings(bot, usersCollection, allStickers) {
 
   cron.schedule("* * * * *", async () => {
     const users = await usersCollection.find({}).toArray();
-    const now = moment();
-
     for (const user of users) {
       if (user.morningTime && user.morningTimezone) {
-        const morningTime = moment.tz(
-          user.morningTime,
-          "HH:mm",
-          user.morningTimezone
-        );
-        if (
-          now.tz(user.morningTimezone).format("HH:mm") ===
-          morningTime.format("HH:mm")
-        ) {
+        const nowInUserOffset = moment().utcOffset(user.morningTimezone);
+        if (nowInUserOffset.format("HH:mm") === user.morningTime) {
           await bot.sendMessage(user.chatId, "Доброе утро! 🌞");
-          const randomSticker =
-            allStickers[Math.floor(Math.random() * allStickers.length)];
-          await bot.sendSticker(user.chatId, randomSticker.file_id);
+          if (allStickers.length > 0) {
+            const randomSticker =
+              allStickers[Math.floor(Math.random() * allStickers.length)];
+            try {
+              await bot.sendSticker(user.chatId, randomSticker.file_id);
+            } catch (error) {
+              console.error(
+                `Ошибка отправки стикера для ${user.chatId}:`,
+                error
+              );
+            }
+          } else {
+            console.log("Стикеры ещё не загружены");
+          }
         }
       }
 
       if (user.eveningTime && user.eveningTimezone) {
-        const eveningTime = moment.tz(
-          user.eveningTime,
-          "HH:mm",
-          user.eveningTimezone
-        );
-        if (
-          now.tz(user.eveningTimezone).format("HH:mm") ===
-          eveningTime.format("HH:mm")
-        ) {
+        const nowInUserOffset = moment().utcOffset(user.eveningTimezone);
+        if (nowInUserOffset.format("HH:mm") === user.eveningTime) {
           await bot.sendMessage(user.chatId, "Спокойной ночи! 🌙");
-          const randomSticker =
-            allStickers[Math.floor(Math.random() * allStickers.length)];
-          await bot.sendSticker(user.chatId, randomSticker.file_id);
+          if (allStickers.length > 0) {
+            const randomSticker =
+              allStickers[Math.floor(Math.random() * allStickers.length)];
+            try {
+              await bot.sendSticker(user.chatId, randomSticker.file_id);
+            } catch (error) {
+              console.error(
+                `Ошибка отправки стикера для ${user.chatId}:`,
+                error
+              );
+            }
+          } else {
+            console.log("Стикеры ещё не загружены");
+          }
         }
       }
     }

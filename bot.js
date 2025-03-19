@@ -75,9 +75,9 @@ async function loadStickers() {
   console.log(`Загружено ${allStickers.length} стикеров`);
 }
 
-loadStickers();
-
-setupGreetings(bot, usersCollection, allStickers);
+loadStickers().then(() => {
+  setupGreetings(bot, usersCollection, allStickers);
+});
 
 async function getUserData(chatId, msg = {}) {
   let user = await usersCollection.findOne({ chatId: chatId.toString() });
