@@ -75,8 +75,22 @@ async function loadStickers() {
   console.log(`Загружено ${allStickers.length} стикеров`);
 }
 
+async function updateUserCommands(chatId) {
+  const user = await getUserData(chatId);
+  const helloDescription = user.name ? "👋 Поздороваться" : "👋 Познакомиться";
+  const commands = [
+    { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
+    { command: "/reset", description: "❌ Сброс отправленных стикеров" },
+    { command: "/info", description: "📃 Инфа о стикерпаках" },
+    { command: "/hello", description: helloDescription },
+  ];
+  await bot.setMyCommands(commands, {
+    scope: { type: "chat", chat_id: chatId },
+  });
+}
+
 loadStickers().then(() => {
-  setupGreetings(bot, usersCollection, allStickers);
+  setupGreetings(bot, usersCollection, allStickers, updateUserCommands);
 });
 
 async function getUserData(chatId, msg = {}) {
@@ -527,6 +541,7 @@ bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, (
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
+  await updateUserCommands(chatId);
   const keyboard = {
     inline_keyboard: [
       [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],

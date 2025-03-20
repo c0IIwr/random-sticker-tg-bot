@@ -1,7 +1,7 @@
 const moment = require("moment-timezone");
 const cron = require("node-cron");
 
-function setupGreetings(bot, usersCollection, allStickers) {
+function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
   function convertToOffset(timezone) {
     if (timezone.startsWith("UTC")) {
       const offset = timezone.slice(3);
@@ -132,6 +132,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
   bot.onText(/\/hello/, async (msg) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
+    await updateUserCommands(chatId);
 
     if (!user.name) {
       await bot.sendMessage(
@@ -180,6 +181,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
         user.name = text;
         user.state = null;
         await saveUserData(user);
+        await updateUserCommands(chatId);
         const message = `Приятно познакомиться, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
         const keyboard = {
           inline_keyboard: [
@@ -324,6 +326,7 @@ function setupGreetings(bot, usersCollection, allStickers) {
       user.eveningTime = null;
       user.state = "waiting_for_name";
       await saveUserData(user);
+      await updateUserCommands(chatId);
       const message = "Ты кто? 🤨";
       const keyboard = {
         inline_keyboard: [
