@@ -7,6 +7,7 @@ const regex = emojiRegex();
 const stickerPacks = require("./stickerPacks");
 const movies = require("./movies");
 const setupGreetings = require("./greetings");
+const { getUserData, saveUserData, resetUserState } = require("./userUtils");
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -52,6 +53,7 @@ connectToDb();
 
 const db = client.db("stickerBotDb");
 const usersCollection = db.collection("users");
+module.exports.usersCollection = usersCollection;
 
 const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 const auth = new google.auth.GoogleAuth({
@@ -92,69 +94,6 @@ async function updateUserCommands(chatId) {
 loadStickers().then(() => {
   setupGreetings(bot, usersCollection, allStickers, updateUserCommands);
 });
-
-async function getUserData(chatId, msg = {}) {
-  let user = await usersCollection.findOne({ chatId: chatId.toString() });
-  if (!user) {
-    user = {
-      chatId: chatId.toString(),
-      sentStickers: [],
-      stickerCount: 0,
-      resetCount: 0,
-      movieCount: 0,
-      sentMovies: [],
-      allStickersSent: false,
-      firstSent: null,
-      lastSent: null,
-      firstName: msg.from?.first_name || "",
-      lastName: msg.from?.last_name || "",
-      username: msg.from?.username || "",
-      languageCode: msg.from?.language_code || "",
-      chatType: msg.chat?.type || "",
-      chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
-      chatUsername: msg.chat?.username || "",
-    };
-    await usersCollection.insertOne(user);
-  } else if (msg.from || msg.chat) {
-    user.firstName = msg.from?.first_name || user.firstName || "";
-    user.lastName = msg.from?.last_name || user.lastName || "";
-    user.username = msg.from?.username || user.username || "";
-    user.languageCode = msg.from?.language_code || user.languageCode || "";
-    user.chatType = msg.chat?.type || user.chatType || "";
-    user.chatTitle =
-      msg.chat?.type !== "private"
-        ? msg.chat?.title || user.chatTitle || ""
-        : user.chatTitle || "";
-    user.chatUsername = msg.chat?.username || user.chatUsername || "";
-    await saveUserData(user);
-  }
-  return user;
-}
-
-async function saveUserData(user) {
-  await usersCollection.updateOne(
-    { chatId: user.chatId },
-    {
-      $set: {
-        sentStickers: user.sentStickers,
-        stickerCount: user.stickerCount,
-        resetCount: user.resetCount,
-        movieCount: user.movieCount,
-        sentMovies: user.sentMovies,
-        allStickersSent: user.allStickersSent,
-        firstSent: user.firstSent,
-        lastSent: user.lastSent,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username,
-        languageCode: user.languageCode,
-        chatType: user.chatType,
-        chatTitle: user.chatTitle,
-        chatUsername: user.chatUsername,
-      },
-    }
-  );
-}
 
 async function updateUserDataInSheet(user) {
   const chatId = user.chatId;
@@ -444,7 +383,9 @@ async function sendSticker(msg) {
   }
 }
 
-bot.onText(/\/kitty/, (msg) => {
+bot.onText(/\/kitty/, async (msg) => {
+  const chatId = msg.chat.id.toString();
+  await resetUserState(chatId);
   sendSticker(msg);
 });
 
@@ -481,8 +422,9 @@ async function resetSentStickers(chatId, silent = false) {
   }
 }
 
-bot.onText(/\/reset/, (msg) => {
+bot.onText(/\/reset/, async (msg) => {
   const chatId = msg.chat.id.toString();
+  await resetUserState(chatId);
   const keyboard = {
     inline_keyboard: [
       [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
@@ -533,24 +475,30 @@ async function sendInfo(chatId) {
   }
 }
 
-bot.onText(/\/info/, (msg) => {
+bot.onText(/\/info/, async (msg) => {
   const chatId = msg.chat.id.toString();
+  await resetUserState(chatId);
   sendInfo(chatId);
 });
 
-bot.onText(/котик/i, (msg) => {
+bot.onText(/котик/i, async (msg) => {
   const text = msg.text.toLowerCase();
   if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
+    const chatId = msg.chat.id.toString();
+    await resetUserState(chatId);
     sendSticker(msg);
   }
 });
 
-bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, (msg) => {
+bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, async (msg) => {
+  const chatId = msg.chat.id.toString();
+  await resetUserState(chatId);
   sendSticker(msg);
 });
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
+  await resetUserState(chatId);
   const user = await getUserData(chatId, msg);
   await updateUserCommands(chatId);
   const keyboard = {
@@ -573,12 +521,12 @@ bot.on("message", async (msg) => {
     if (isOnlyEmojis(text)) {
       const userEmojis = text.match(regex);
       if (userEmojis && userEmojis.length > 0) {
+        const chatId = msg.chat.id.toString();
+        const user = await getUserData(chatId, msg);
         const matchingStickers = allStickers.filter((sticker) => {
           const stickerEmojis = splitEmojis(sticker.emoji);
           return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
         });
-        const chatId = msg.chat.id.toString();
-        const user = await getUserData(chatId, msg);
         await sendRandomStickerFromList(
           chatId,
           matchingStickers,

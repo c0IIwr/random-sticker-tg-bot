@@ -1,5 +1,6 @@
 const moment = require("moment-timezone");
 const cron = require("node-cron");
+const { getUserData, saveUserData, resetUserState } = require("./userUtils");
 
 function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
   function convertToOffset(timezone) {
@@ -10,67 +11,6 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
       return `${sign}${hours.toString().padStart(2, "0")}:00`;
     }
     return timezone;
-  }
-
-  async function getUserData(chatId, msg = {}) {
-    let user = await usersCollection.findOne({ chatId: chatId.toString() });
-    if (!user) {
-      user = {
-        chatId: chatId.toString(),
-        sentStickers: [],
-        stickerCount: 0,
-        resetCount: 0,
-        movieCount: 0,
-        sentMovies: [],
-        allStickersSent: false,
-        firstSent: null,
-        lastSent: null,
-        firstName: msg.from?.first_name || "",
-        lastName: msg.from?.last_name || "",
-        username: msg.from?.username || "",
-        languageCode: msg.from?.language_code || "",
-        chatType: msg.chat?.type || "",
-        chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
-        chatUsername: msg.chat?.username || "",
-        name: null,
-        morningTime: null,
-        eveningTime: null,
-        timezone: null,
-        state: null,
-      };
-      await usersCollection.insertOne(user);
-    }
-    return user;
-  }
-
-  async function saveUserData(user) {
-    await usersCollection.updateOne(
-      { chatId: user.chatId },
-      {
-        $set: {
-          sentStickers: user.sentStickers,
-          stickerCount: user.stickerCount,
-          resetCount: user.resetCount,
-          movieCount: user.movieCount,
-          sentMovies: user.sentMovies,
-          allStickersSent: user.allStickersSent,
-          firstSent: user.firstSent,
-          lastSent: user.lastSent,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          languageCode: user.languageCode,
-          chatType: user.chatType,
-          chatTitle: user.chatTitle,
-          chatUsername: user.chatUsername,
-          name: user.name,
-          morningTime: user.morningTime,
-          eveningTime: user.eveningTime,
-          timezone: user.timezone,
-          state: user.state,
-        },
-      }
-    );
   }
 
   function formatTimezone(tz) {
@@ -139,6 +79,7 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
 
   bot.onText(/\/hello/, async (msg) => {
     const chatId = msg.chat.id.toString();
+    await resetUserState(chatId);
     const user = await getUserData(chatId, msg);
     await updateUserCommands(chatId);
 
