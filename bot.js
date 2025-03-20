@@ -445,25 +445,25 @@ async function sendSticker(msg) {
 }
 
 async function withStateReset(handler) {
-  return async (msg) => {
+  return async (msg, match) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
     user.state = null;
     await saveUserData(user);
-    await handler(msg);
+    await handler(msg, match);
   };
 }
 
 bot.onText(
   /\/kitty/,
-  withStateReset((msg) => {
+  withStateReset((msg, match) => {
     sendSticker(msg);
   })
 );
 
 bot.onText(
   /\/reset/,
-  withStateReset((msg) => {
+  withStateReset((msg, match) => {
     const chatId = msg.chat.id.toString();
     const keyboard = {
       inline_keyboard: [
@@ -482,7 +482,7 @@ bot.onText(
 
 bot.onText(
   /\/info/,
-  withStateReset((msg) => {
+  withStateReset((msg, match) => {
     const chatId = msg.chat.id.toString();
     sendInfo(chatId);
   })
@@ -490,7 +490,7 @@ bot.onText(
 
 bot.onText(
   /котик/i,
-  withStateReset((msg) => {
+  withStateReset((msg, match) => {
     const text = msg.text.toLowerCase();
     if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
       sendSticker(msg);
@@ -500,14 +500,14 @@ bot.onText(
 
 bot.onText(
   /^(Отправить котика 🤗|Ещё котик 🤗)$/i,
-  withStateReset((msg) => {
+  withStateReset((msg, match) => {
     sendSticker(msg);
   })
 );
 
 bot.onText(
   /\/start/,
-  withStateReset(async (msg) => {
+  withStateReset(async (msg, match) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
     await updateUserCommands(chatId);

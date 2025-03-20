@@ -137,7 +137,7 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
     return { inline_keyboard: buttons };
   }
 
-  bot.onText(/\/hello/, async (msg) => {
+  bot.onText(/\/hello/, async (msg, match) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
 
