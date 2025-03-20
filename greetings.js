@@ -1,8 +1,9 @@
 const moment = require("moment-timezone");
 const cron = require("node-cron");
+const db = require("./db");
 const { getUserData, saveUserData, resetUserState } = require("./userUtils");
 
-function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
+function setupGreetings(bot, allStickers, updateUserCommands) {
   function convertToOffset(timezone) {
     if (timezone.startsWith("UTC")) {
       const offset = timezone.slice(3);
@@ -333,6 +334,7 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
   });
 
   cron.schedule("* * * * *", async () => {
+    const usersCollection = await db.getUsersCollection();
     const users = await usersCollection.find({}).toArray();
     for (const user of users) {
       const tz = user.timezone || "+03:00";

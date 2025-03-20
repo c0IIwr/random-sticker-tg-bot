@@ -1,6 +1,7 @@
-const { usersCollection } = require("./bot");
+const db = require("./db");
 
 async function getUserData(chatId, msg = {}) {
+  const usersCollection = await db.getUsersCollection();
   let user = await usersCollection.findOne({ chatId: chatId.toString() });
   if (!user) {
     user = {
@@ -44,6 +45,7 @@ async function getUserData(chatId, msg = {}) {
 }
 
 async function saveUserData(user) {
+  const usersCollection = await db.getUsersCollection();
   await usersCollection.updateOne(
     { chatId: user.chatId },
     {

@@ -1,13 +1,13 @@
 const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
-const { MongoClient } = require("mongodb");
-const { google } = require("googleapis");
-const emojiRegex = require("emoji-regex");
-const regex = emojiRegex();
+const db = require("./db");
 const stickerPacks = require("./stickerPacks");
 const movies = require("./movies");
 const setupGreetings = require("./greetings");
 const { getUserData, saveUserData, resetUserState } = require("./userUtils");
+const { google } = require("googleapis");
+const emojiRegex = require("emoji-regex");
+const regex = emojiRegex();
 
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
@@ -36,24 +36,6 @@ server.post(webhookPath, (req, res) => {
 server.listen(port, () => {
   console.log(`Сервер запущен на порту ${port}`);
 });
-
-const mongoUrl = process.env.MONGO_URL;
-const client = new MongoClient(mongoUrl);
-
-async function connectToDb() {
-  try {
-    await client.connect();
-    console.log("Подключено к MongoDB");
-  } catch (error) {
-    console.error("Ошибка подключения к MongoDB:", error);
-  }
-}
-
-connectToDb();
-
-const db = client.db("stickerBotDb");
-const usersCollection = db.collection("users");
-module.exports.usersCollection = usersCollection;
 
 const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
 const auth = new google.auth.GoogleAuth({
@@ -91,9 +73,13 @@ async function updateUserCommands(chatId) {
   });
 }
 
-loadStickers().then(() => {
-  setupGreetings(bot, usersCollection, allStickers, updateUserCommands);
-});
+async function startBot() {
+  await db.connectToDb();
+  await loadStickers();
+  setupGreetings(bot, allStickers, updateUserCommands);
+}
+
+startBot();
 
 async function updateUserDataInSheet(user) {
   const chatId = user.chatId;
