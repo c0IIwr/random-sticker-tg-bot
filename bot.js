@@ -483,7 +483,18 @@ async function resetSentStickers(chatId, silent = false) {
 
 bot.onText(/\/reset/, (msg) => {
   const chatId = msg.chat.id.toString();
-  resetSentStickers(chatId);
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
+    ],
+  };
+  bot.sendMessage(
+    chatId,
+    "Ты точно хочешь сбросить список отправленных стикеров? 🤔",
+    {
+      reply_markup: JSON.stringify(keyboard),
+    }
+  );
 });
 
 async function sendInfo(chatId) {
@@ -583,7 +594,14 @@ bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id.toString();
   const data = query.data;
 
-  if (data === "random_sticker") {
+  if (data === "confirm_reset") {
+    try {
+      await bot.deleteMessage(chatId, query.message.message_id);
+    } catch (error) {
+      console.error("Ошибка при удалении сообщения:", error);
+    }
+    await resetSentStickers(chatId);
+  } else if (data === "random_sticker") {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   } else if (data.startsWith("send_again_")) {
     const emojis = data.replace("send_again_", "");

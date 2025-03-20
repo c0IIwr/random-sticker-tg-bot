@@ -258,10 +258,16 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
               reply_markup: JSON.stringify(keyboard),
             });
           } else {
-            await bot.sendMessage(chatId, "Укажи время, например, 23:59");
+            await bot.sendMessage(
+              chatId,
+              "Укажи время, например, 23:59 или 23:59 UTC+10"
+            );
           }
         } else {
-          await bot.sendMessage(chatId, "Укажи время, например, 23:59");
+          await bot.sendMessage(
+            chatId,
+            "Укажи время, например, 23:59 или 23:59 UTC+10"
+          );
         }
       }
     }
