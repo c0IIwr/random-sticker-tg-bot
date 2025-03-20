@@ -26,6 +26,7 @@ async function getUserData(chatId, msg = {}) {
       eveningTime: null,
       timezone: null,
       state: null,
+      sentFacts: [],
     };
     await usersCollection.insertOne(user);
   } else if (msg.from || msg.chat) {
@@ -70,6 +71,7 @@ async function saveUserData(user) {
         eveningTime: user.eveningTime,
         timezone: user.timezone,
         state: user.state,
+        sentFacts: user.sentFacts,
       },
     }
   );

@@ -3,6 +3,7 @@ const TelegramBot = require("node-telegram-bot-api");
 const db = require("./db");
 const stickerPacks = require("./stickerPacks");
 const movies = require("./movies");
+const facts = require("./facts.js");
 const setupGreetings = require("./greetings");
 const { getUserData, saveUserData, resetUserState } = require("./userUtils");
 const { google } = require("googleapis");
@@ -66,6 +67,7 @@ async function updateUserCommands(chatId) {
     { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
     { command: "/reset", description: "❌ Сброс отправленных стикеров" },
     { command: "/info", description: "📃 Инфа о стикерпаках" },
+    { command: "/fact", description: "🧐 Случайный факт" },
     { command: "/hello", description: helloDescription },
   ];
   await bot.setMyCommands(commands, {
@@ -524,6 +526,34 @@ bot.on("message", async (msg) => {
   }
 });
 
+async function sendRandomFact(chatId) {
+  const user = await getUserData(chatId);
+  let availableFacts = facts.filter(
+    (fact) => !user.sentFacts.includes(fact.number)
+  );
+  if (availableFacts.length === 0) {
+    user.sentFacts = [];
+    availableFacts = facts;
+  }
+  const randomIndex = Math.floor(Math.random() * availableFacts.length);
+  const fact = availableFacts[randomIndex];
+  user.sentFacts.push(fact.number);
+  await saveUserData(user);
+  const message = `Интересный факт №${fact.number} 🧐\n${fact.fact}`;
+  const keyboard = {
+    inline_keyboard: [[{ text: "Ещё факт 🤓", callback_data: "more_fact" }]],
+  };
+  await bot.sendMessage(chatId, message, {
+    reply_markup: JSON.stringify(keyboard),
+  });
+}
+
+bot.onText(/\/fact/, async (msg) => {
+  const chatId = msg.chat.id.toString();
+  await resetUserState(chatId);
+  await sendRandomFact(chatId);
+});
+
 bot.on("callback_query", async (query) => {
   const chatId = query.message.chat.id.toString();
   const data = query.data;
@@ -549,6 +579,8 @@ bot.on("callback_query", async (query) => {
   } else if (data === "reset_and_send") {
     await resetSentStickers(chatId, true);
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
+  } else if (data === "more_fact") {
+    await sendRandomFact(chatId);
   }
 
   await bot.answerCallbackQuery(query.id);
@@ -558,6 +590,7 @@ bot.setMyCommands([
   { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
   { command: "/reset", description: "❌ Сброс отправленных стикеров" },
   { command: "/info", description: "📃 Инфа о стикерпаках" },
+  { command: "/fact", description: "🧐 Случайный факт" },
   { command: "/hello", description: "👋 Познакомиться" },
 ]);
 
