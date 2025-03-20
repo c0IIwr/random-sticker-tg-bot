@@ -1,9 +1,19 @@
 const moment = require("moment-timezone");
 const cron = require("node-cron");
 const db = require("./db");
-const { getUserData, saveUserData, resetUserState } = require("./userUtils");
+const {
+  getUserData,
+  saveUserData,
+  resetUserState,
+  getAndMarkRandomFact,
+} = require("./userUtils");
 
-function setupGreetings(bot, allStickers, updateUserCommands) {
+function setupGreetings(
+  bot,
+  allStickers,
+  updateUserCommands,
+  updateUserDataInSheet
+) {
   function convertToOffset(timezone) {
     if (timezone.startsWith("UTC")) {
       const offset = timezone.slice(3);
@@ -348,7 +358,14 @@ function setupGreetings(bot, allStickers, updateUserCommands) {
         user.morningTime &&
         nowInUserOffset.format("HH:mm") === user.morningTime
       ) {
-        await bot.sendMessage(user.chatId, `Доброе утречко, ${user.name}! 🌞`);
+        const factMessage = await getAndMarkRandomFact(user);
+        const greetingMessage = `Доброе утречко, ${user.name}! 🌞\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
+        await bot.sendMessage(user.chatId, greetingMessage, {
+          parse_mode: "HTML",
+        });
+        updateUserDataInSheet(user).catch((error) => {
+          console.error("Ошибка при обновлении данных в Google Sheets:", error);
+        });
         const randomSticker =
           allStickers[Math.floor(Math.random() * allStickers.length)];
         try {
@@ -362,7 +379,14 @@ function setupGreetings(bot, allStickers, updateUserCommands) {
         user.eveningTime &&
         nowInUserOffset.format("HH:mm") === user.eveningTime
       ) {
-        await bot.sendMessage(user.chatId, `Спокойной ночки, ${user.name}! 🌙`);
+        const factMessage = await getAndMarkRandomFact(user);
+        const greetingMessage = `Спокойной ночки, ${user.name}! 🌙\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
+        await bot.sendMessage(user.chatId, greetingMessage, {
+          parse_mode: "HTML",
+        });
+        updateUserDataInSheet(user).catch((error) => {
+          console.error("Ошибка при обновлении данных в Google Sheets:", error);
+        });
         const randomSticker =
           allStickers[Math.floor(Math.random() * allStickers.length)];
         try {

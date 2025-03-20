@@ -1,4 +1,5 @@
 const db = require("./db");
+const facts = require("./facts.js");
 
 async function getUserData(chatId, msg = {}) {
   const usersCollection = await db.getUsersCollection();
@@ -102,4 +103,25 @@ async function resetUserState(chatId) {
   await saveUserData(user);
 }
 
-module.exports = { getUserData, saveUserData, resetUserState };
+async function getAndMarkRandomFact(user) {
+  let availableFacts = facts.filter(
+    (fact) => !user.sentFacts.includes(fact.number)
+  );
+  if (availableFacts.length === 0) {
+    user.sentFacts = [];
+    availableFacts = facts;
+  }
+  const randomIndex = Math.floor(Math.random() * availableFacts.length);
+  const fact = availableFacts[randomIndex];
+  user.sentFacts.push(fact.number);
+  user.factCount = (user.factCount || 0) + 1;
+  await saveUserData(user);
+  return `Интересный факт #${fact.number} 🧐\n\n${fact.fact}`;
+}
+
+module.exports = {
+  getUserData,
+  saveUserData,
+  resetUserState,
+  getAndMarkRandomFact,
+};

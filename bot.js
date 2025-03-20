@@ -3,9 +3,13 @@ const TelegramBot = require("node-telegram-bot-api");
 const db = require("./db");
 const stickerPacks = require("./stickerPacks");
 const movies = require("./movies");
-const facts = require("./facts.js");
 const setupGreetings = require("./greetings");
-const { getUserData, saveUserData, resetUserState } = require("./userUtils");
+const {
+  getUserData,
+  saveUserData,
+  resetUserState,
+  getAndMarkRandomFact,
+} = require("./userUtils");
 const { google } = require("googleapis");
 const emojiRegex = require("emoji-regex");
 const regex = emojiRegex();
@@ -78,7 +82,7 @@ async function updateUserCommands(chatId) {
 async function startBot() {
   await db.connectToDb();
   await loadStickers();
-  setupGreetings(bot, allStickers, updateUserCommands);
+  setupGreetings(bot, allStickers, updateUserCommands, updateUserDataInSheet);
 }
 
 startBot();
@@ -530,26 +534,14 @@ bot.on("message", async (msg) => {
 
 async function sendRandomFact(chatId) {
   const user = await getUserData(chatId);
-  let availableFacts = facts.filter(
-    (fact) => !user.sentFacts.includes(fact.number)
-  );
-  if (availableFacts.length === 0) {
-    user.sentFacts = [];
-    availableFacts = facts;
-  }
-  const randomIndex = Math.floor(Math.random() * availableFacts.length);
-  const fact = availableFacts[randomIndex];
-  user.sentFacts.push(fact.number);
-  user.factCount = (user.factCount || 0) + 1;
-  await saveUserData(user);
+  const factMessage = await getAndMarkRandomFact(user);
   updateUserDataInSheet(user).catch((error) => {
     console.error("Ошибка при обновлении данных в Google Sheets:", error);
   });
-  const message = `Интересный факт #${fact.number} 🧐\n\n${fact.fact}`;
   const keyboard = {
     inline_keyboard: [[{ text: "Ещё факт 🤓", callback_data: "more_fact" }]],
   };
-  await bot.sendMessage(chatId, message, {
+  await bot.sendMessage(chatId, factMessage, {
     reply_markup: JSON.stringify(keyboard),
   });
 }
