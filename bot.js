@@ -444,87 +444,9 @@ async function sendSticker(msg) {
   }
 }
 
-async function withStateReset(handler) {
-  return async (msg, match) => {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
-    user.state = null;
-    await saveUserData(user);
-    await handler(msg, match);
-  };
-}
-
-bot.onText(
-  /\/kitty/,
-  withStateReset((msg, match) => {
-    sendSticker(msg);
-  })
-);
-
-bot.onText(
-  /\/reset/,
-  withStateReset((msg, match) => {
-    const chatId = msg.chat.id.toString();
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
-      ],
-    };
-    bot.sendMessage(
-      chatId,
-      "Ты точно хочешь сбросить список отправленных стикеров? 🤔",
-      {
-        reply_markup: JSON.stringify(keyboard),
-      }
-    );
-  })
-);
-
-bot.onText(
-  /\/info/,
-  withStateReset((msg, match) => {
-    const chatId = msg.chat.id.toString();
-    sendInfo(chatId);
-  })
-);
-
-bot.onText(
-  /котик/i,
-  withStateReset((msg, match) => {
-    const text = msg.text.toLowerCase();
-    if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
-      sendSticker(msg);
-    }
-  })
-);
-
-bot.onText(
-  /^(Отправить котика 🤗|Ещё котик 🤗)$/i,
-  withStateReset((msg, match) => {
-    sendSticker(msg);
-  })
-);
-
-bot.onText(
-  /\/start/,
-  withStateReset(async (msg, match) => {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
-    await updateUserCommands(chatId);
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
-      ],
-    };
-    await bot.sendMessage(
-      chatId,
-      "Нажми кнопку, чтобы получить стикер с котиком 🤗",
-      {
-        reply_markup: JSON.stringify(keyboard),
-      }
-    );
-  })
-);
+bot.onText(/\/kitty/, (msg) => {
+  sendSticker(msg);
+});
 
 async function resetSentStickers(chatId, silent = false) {
   try {
@@ -558,6 +480,22 @@ async function resetSentStickers(chatId, silent = false) {
     });
   }
 }
+
+bot.onText(/\/reset/, (msg) => {
+  const chatId = msg.chat.id.toString();
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
+    ],
+  };
+  bot.sendMessage(
+    chatId,
+    "Ты точно хочешь сбросить список отправленных стикеров? 🤔",
+    {
+      reply_markup: JSON.stringify(keyboard),
+    }
+  );
+});
 
 async function sendInfo(chatId) {
   try {
@@ -594,6 +532,40 @@ async function sendInfo(chatId) {
     });
   }
 }
+
+bot.onText(/\/info/, (msg) => {
+  const chatId = msg.chat.id.toString();
+  sendInfo(chatId);
+});
+
+bot.onText(/котик/i, (msg) => {
+  const text = msg.text.toLowerCase();
+  if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
+    sendSticker(msg);
+  }
+});
+
+bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, (msg) => {
+  sendSticker(msg);
+});
+
+bot.onText(/\/start/, async (msg) => {
+  const chatId = msg.chat.id.toString();
+  const user = await getUserData(chatId, msg);
+  await updateUserCommands(chatId);
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
+    ],
+  };
+  await bot.sendMessage(
+    chatId,
+    "Нажми кнопку, чтобы получить стикер с котиком 🤗",
+    {
+      reply_markup: JSON.stringify(keyboard),
+    }
+  );
+});
 
 bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {

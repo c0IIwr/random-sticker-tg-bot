@@ -137,13 +137,9 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
     return { inline_keyboard: buttons };
   }
 
-  bot.onText(/\/hello/, async (msg, match) => {
+  bot.onText(/\/hello/, async (msg) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
-
-    user.state = null;
-    await saveUserData(user);
-
     await updateUserCommands(chatId);
 
     if (!user.name) {
