@@ -140,6 +140,10 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
   bot.onText(/\/hello/, async (msg) => {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
+
+    user.state = null;
+    await saveUserData(user);
+
     await updateUserCommands(chatId);
 
     if (!user.name) {
