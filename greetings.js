@@ -74,7 +74,7 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
   }
 
   function formatTimezone(tz) {
-    return tz === "+03:00" ? "" : ` (UTC${tz})`;
+    return tz === "+03:00" ? "" : ` [UTC${tz}]`;
   }
 
   function calculateRemainingTime(user, period) {
@@ -96,6 +96,14 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
     const hoursLeft = Math.floor(duration.asHours());
     const minutesLeft = Math.floor(duration.asMinutes()) % 60;
     return { hoursLeft, minutesLeft };
+  }
+
+  function formatRemainingTime(hours, minutes) {
+    if (hours > 0) {
+      return `${hours}ч ${minutes}м`;
+    } else {
+      return `${minutes}м`;
+    }
   }
 
   function getKeyboard(user, includeForgetName = false) {
@@ -151,14 +159,22 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
       } else {
         if (user.morningTime) {
           const remaining = calculateRemainingTime(user, "morning");
-          message += `\nУтро запланировано на ${user.morningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+          const remainingText = formatRemainingTime(
+            remaining.hoursLeft,
+            remaining.minutesLeft
+          );
+          message += `\nУтро запланировано на ${user.morningTime}${tzText} (осталось ${remainingText})`;
         } else {
           message += `\nУтро не запланировано`;
         }
 
         if (user.eveningTime) {
           const remaining = calculateRemainingTime(user, "evening");
-          message += `\nНочь запланирована на ${user.eveningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+          const remainingText = formatRemainingTime(
+            remaining.hoursLeft,
+            remaining.minutesLeft
+          );
+          message += `\nНочь запланирована на ${user.eveningTime}${tzText} (осталось ${remainingText})`;
         } else {
           message += `\nНочь не запланирована`;
         }
@@ -231,8 +247,12 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
               user,
               period.toLowerCase() === "утро" ? "morning" : "evening"
             );
+            const remainingText = formatRemainingTime(
+              remaining.hoursLeft,
+              remaining.minutesLeft
+            );
             const verb = period === "Утро" ? "запланировано" : "запланирована";
-            let message = `${period} ${verb} на ${timeStr}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+            let message = `${period} ${verb} на ${timeStr}${tzText} (осталось ${remainingText})`;
 
             const otherPeriod = period === "Утро" ? "Ночь" : "Утро";
             const otherTime =
@@ -242,9 +262,13 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
                 user,
                 period === "Утро" ? "evening" : "morning"
               );
+              const otherRemainingText = formatRemainingTime(
+                otherRemaining.hoursLeft,
+                otherRemaining.minutesLeft
+              );
               const otherVerb =
                 otherPeriod === "Утро" ? "запланировано" : "запланирована";
-              message += `\n${otherPeriod} ${otherVerb} на ${otherTime}${tzText} (осталось ${otherRemaining.hoursLeft}ч ${otherRemaining.minutesLeft}м)`;
+              message += `\n${otherPeriod} ${otherVerb} на ${otherTime}${tzText} (осталось ${otherRemainingText})`;
             } else {
               const otherVerb =
                 otherPeriod === "Утро"
@@ -299,8 +323,12 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
       let message = "Время на утро сброшено 👍";
       if (user.eveningTime) {
         const remaining = calculateRemainingTime(user, "evening");
+        const remainingText = formatRemainingTime(
+          remaining.hoursLeft,
+          remaining.minutesLeft
+        );
         const tzText = formatTimezone(user.timezone || "+03:00");
-        message += `\nНочь запланирована на ${user.eveningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+        message += `\nНочь запланирована на ${user.eveningTime}${tzText} (осталось ${remainingText})`;
       } else {
         message += `\nНочь не запланирована`;
       }
@@ -316,8 +344,12 @@ function setupGreetings(bot, usersCollection, allStickers, updateUserCommands) {
       let message = "Время на ночь сброшено 👍";
       if (user.morningTime) {
         const remaining = calculateRemainingTime(user, "morning");
+        const remainingText = formatRemainingTime(
+          remaining.hoursLeft,
+          remaining.minutesLeft
+        );
         const tzText = formatTimezone(user.timezone || "+03:00");
-        message += `\nУтро запланировано на ${user.morningTime}${tzText} (осталось ${remaining.hoursLeft}ч ${remaining.minutesLeft}м)`;
+        message += `\nУтро запланировано на ${user.morningTime}${tzText} (осталось ${remainingText})`;
       } else {
         message += `\nУтро не запланировано`;
       }
