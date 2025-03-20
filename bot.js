@@ -539,7 +539,7 @@ async function sendRandomFact(chatId) {
   const fact = availableFacts[randomIndex];
   user.sentFacts.push(fact.number);
   await saveUserData(user);
-  const message = `Интересный факт №${fact.number} 🧐\n${fact.fact}`;
+  const message = `Интересный факт #${fact.number} 🧐\n\n${fact.fact}`;
   const keyboard = {
     inline_keyboard: [[{ text: "Ещё факт 🤓", callback_data: "more_fact" }]],
   };
