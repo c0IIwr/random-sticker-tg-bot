@@ -136,6 +136,10 @@ function setupGreetings(bot, allStickers, updateUserCommands) {
       const text = msg.text.trim();
 
       if (user.state === "waiting_for_name") {
+        if (/котик/i.test(text)) {
+          return;
+        }
+
         user.name = text;
         user.state = null;
         await saveUserData(user);
