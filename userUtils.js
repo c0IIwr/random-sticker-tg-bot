@@ -27,6 +27,7 @@ async function getUserData(chatId, msg = {}) {
     timezone: null,
     state: null,
     sentFacts: [],
+    factCount: 0,
   };
 
   if (!user) {
@@ -89,6 +90,7 @@ async function saveUserData(user) {
         timezone: user.timezone,
         state: user.state,
         sentFacts: user.sentFacts,
+        factCount: user.factCount,
       },
     }
   );

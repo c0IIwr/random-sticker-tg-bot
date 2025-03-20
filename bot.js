@@ -105,6 +105,7 @@ async function updateUserDataInSheet(user) {
   const stickerCountDisplay = `${sentNow} (${totalSent})`;
   const resetCount = user.resetCount || 0;
   const movieCount = user.movieCount || 0;
+  const factCount = user.factCount || 0;
 
   const formatDate = (date) => {
     if (!date) return "";
@@ -144,6 +145,7 @@ async function updateUserDataInSheet(user) {
     stickerCount: stickerCountDisplay,
     resetCount,
     movieCount,
+    factCount,
     firstSent,
     lastSent,
   };
@@ -538,7 +540,11 @@ async function sendRandomFact(chatId) {
   const randomIndex = Math.floor(Math.random() * availableFacts.length);
   const fact = availableFacts[randomIndex];
   user.sentFacts.push(fact.number);
+  user.factCount = (user.factCount || 0) + 1;
   await saveUserData(user);
+  updateUserDataInSheet(user).catch((error) => {
+    console.error("Ошибка при обновлении данных в Google Sheets:", error);
+  });
   const message = `Интересный факт #${fact.number} 🧐\n\n${fact.fact}`;
   const keyboard = {
     inline_keyboard: [[{ text: "Ещё факт 🤓", callback_data: "more_fact" }]],
