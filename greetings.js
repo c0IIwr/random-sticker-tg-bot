@@ -181,11 +181,17 @@ function setupGreetings(
           const keyboard = {
             inline_keyboard: [
               [{ text: `Оставить ${inputName}`, callback_data: "keep_name" }],
-              ...foundVariants.map((variant) => [
-                { text: variant, callback_data: `choose_name_${variant}` },
-              ]),
             ],
           };
+
+          for (let i = 0; i < foundVariants.length; i += 4) {
+            const row = foundVariants.slice(i, i + 4).map((variant) => ({
+              text: variant,
+              callback_data: `choose_name_${variant}`,
+            }));
+            keyboard.inline_keyboard.push(row);
+          }
+
           await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
