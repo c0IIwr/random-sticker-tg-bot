@@ -7,6 +7,7 @@ const {
   resetUserState,
   getAndMarkRandomFact,
 } = require("./userUtils");
+const nameVariants = require("./nameVariants");
 
 function setupGreetings(
   bot,
@@ -150,22 +151,66 @@ function setupGreetings(
           return;
         }
 
-        user.name = text;
-        user.state = null;
+        const inputName = text.trim();
+        user.name = inputName;
         await saveUserData(user);
-        await updateUserCommands(chatId);
-        const message = `Приятно познакомиться, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
-        const keyboard = {
-          inline_keyboard: [
-            [
-              { text: "Время просыпаться 🌞", callback_data: "set_morning" },
-              { text: "Время ложиться спать 🌙", callback_data: "set_evening" },
+
+        const inputNameLower = inputName.toLowerCase();
+        let foundVariants = [];
+        let fullNameMatch = "";
+
+        for (const fullName in nameVariants) {
+          const fullNameLower = fullName.toLowerCase();
+          const variants = nameVariants[fullName]
+            .split(",")
+            .map((v) => v.trim());
+          const variantsLower = variants.map((v) => v.toLowerCase());
+
+          if (
+            fullNameLower === inputNameLower ||
+            variantsLower.includes(inputNameLower)
+          ) {
+            fullNameMatch = fullName;
+            foundVariants = [fullName, ...variants];
+            break;
+          }
+        }
+
+        if (foundVariants.length > 0) {
+          const message = `Приятно познакомиться, ${inputName}! 🤗\nКак тебе больше нравится?`;
+          const keyboard = {
+            inline_keyboard: [
+              [{ text: `Оставить ${inputName}`, callback_data: "keep_name" }],
+              ...foundVariants.map((variant) => [
+                { text: variant, callback_data: `choose_name_${variant}` },
+              ]),
             ],
-          ],
-        };
-        await bot.sendMessage(chatId, message, {
-          reply_markup: JSON.stringify(keyboard),
-        });
+          };
+          await bot.sendMessage(chatId, message, {
+            reply_markup: JSON.stringify(keyboard),
+          });
+          user.state = "choosing_name";
+          await saveUserData(user);
+        } else {
+          user.state = null;
+          await saveUserData(user);
+          await updateUserCommands(chatId);
+          const message = `Приятно познакомиться, ${inputName}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
+          const keyboard = {
+            inline_keyboard: [
+              [
+                { text: "Время просыпаться 🌞", callback_data: "set_morning" },
+                {
+                  text: "Время ложиться спать 🌙",
+                  callback_data: "set_evening",
+                },
+              ],
+            ],
+          };
+          await bot.sendMessage(chatId, message, {
+            reply_markup: JSON.stringify(keyboard),
+          });
+        }
       } else if (
         user.state === "waiting_for_morning_time" ||
         user.state === "waiting_for_evening_time"
@@ -258,7 +303,41 @@ function setupGreetings(
     const data = query.data;
     const user = await getUserData(chatId);
 
-    if (data === "set_morning") {
+    if (data.startsWith("choose_name_")) {
+      const chosenName = data.replace("choose_name_", "");
+      user.name = chosenName;
+      user.state = null;
+      await saveUserData(user);
+      await updateUserCommands(chatId);
+      const message = `Отлично, ${chosenName}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: "Время просыпаться 🌞", callback_data: "set_morning" },
+            { text: "Время ложиться спать 🌙", callback_data: "set_evening" },
+          ],
+        ],
+      };
+      await bot.sendMessage(chatId, message, {
+        reply_markup: JSON.stringify(keyboard),
+      });
+    } else if (data === "keep_name") {
+      user.state = null;
+      await saveUserData(user);
+      await updateUserCommands(chatId);
+      const message = `Отлично, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: "Время просыпаться 🌞", callback_data: "set_morning" },
+            { text: "Время ложиться спать 🌙", callback_data: "set_evening" },
+          ],
+        ],
+      };
+      await bot.sendMessage(chatId, message, {
+        reply_markup: JSON.stringify(keyboard),
+      });
+    } else if (data === "set_morning") {
       await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
