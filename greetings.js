@@ -157,7 +157,7 @@ function setupGreetings(
 
         const inputNameLower = inputName.toLowerCase();
         let foundVariants = [];
-        let fullNameMatch = "";
+        let fullNameMatches = [];
 
         for (const fullName in nameVariants) {
           const fullNameLower = fullName.toLowerCase();
@@ -170,14 +170,16 @@ function setupGreetings(
             fullNameLower === inputNameLower ||
             variantsLower.includes(inputNameLower)
           ) {
-            fullNameMatch = fullName;
-            foundVariants = [fullName, ...variants];
-            break;
+            fullNameMatches.push(fullName);
+            foundVariants.push(fullName, ...variants);
           }
         }
 
-        if (foundVariants.length > 0) {
+        if (fullNameMatches.length > 0) {
           const message = `Приятно познакомиться, ${inputName}! 🤗\nКак тебе больше нравится?`;
+          foundVariants = [...new Set(foundVariants)].filter(
+            (variant) => variant.toLowerCase() !== inputNameLower
+          );
           const keyboard = {
             inline_keyboard: [
               [{ text: `Оставить ${inputName}`, callback_data: "keep_name" }],

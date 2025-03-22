@@ -116,7 +116,7 @@ async function getAndMarkRandomFact(user) {
   user.sentFacts.push(fact.number);
   user.factCount = (user.factCount || 0) + 1;
   await saveUserData(user);
-  return `Интересный факт #${fact.number} 🧐\n\n${fact.fact}`;
+  return `<b>Интересный факт #${fact.number} 🧐</b>\n${fact.fact}`;
 }
 
 module.exports = {
