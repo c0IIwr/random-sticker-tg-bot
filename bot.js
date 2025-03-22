@@ -542,6 +542,7 @@ async function sendRandomFact(chatId) {
     inline_keyboard: [[{ text: "Ещё факт 🤓", callback_data: "more_fact" }]],
   };
   await bot.sendMessage(chatId, factMessage, {
+    parse_mode: "HTML",
     reply_markup: JSON.stringify(keyboard),
   });
 }
