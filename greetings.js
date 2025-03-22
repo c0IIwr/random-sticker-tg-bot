@@ -10,19 +10,19 @@ const {
 const nameVariants = require("./nameVariants");
 
 const morningGreetings = [
-  "Доброе утречко! 🌞",
-  "С добрым утром! ☀️",
-  "Привет, соня! 😊",
-  "Утро доброе! 🌅",
-  "Доброго утра! 🌼",
+  "Доброе утречко! {name} 🌞",
+  "С добрым утром, {name}! ☀️",
+  "Привет, {name}! 😊",
+  "Утро доброе, {name}! 🌅",
+  "Доброго утра, {name}! 🌼",
 ];
 
 const eveningGreetings = [
-  "Спокойной ночки! 🌙",
-  "Сладких снов! 🌟",
-  "Доброй ночи! 🌌",
-  "Приятных снов! 🌠",
-  "Споки-ноки! 🌃",
+  "Спокойной ночки, {name}! 🌙",
+  "Сладких снов, {name}! 🌟",
+  "Доброй ночи, {name}! 🌌",
+  "Приятных снов, {name}! 🌠",
+  "Споки-ноки, {name}! 🌃",
 ];
 
 function setupGreetings(
@@ -461,12 +461,13 @@ function setupGreetings(
         user.morningTime &&
         nowInUserOffset.format("HH:mm") === user.morningTime
       ) {
-        const greeting = morningGreetings[user.morningGreetingIndex];
+        const greetingTemplate = morningGreetings[user.morningGreetingIndex];
+        const greeting = greetingTemplate.replace("{name}", user.name);
         user.morningGreetingIndex =
           (user.morningGreetingIndex + 1) % morningGreetings.length;
         await saveUserData(user);
         const factMessage = await getAndMarkRandomFact(user);
-        const greetingMessage = `${greeting}, ${user.name}!\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
+        const greetingMessage = `${greeting}\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
         await bot.sendMessage(user.chatId, greetingMessage, {
           parse_mode: "HTML",
         });
@@ -486,12 +487,13 @@ function setupGreetings(
         user.eveningTime &&
         nowInUserOffset.format("HH:mm") === user.eveningTime
       ) {
-        const greeting = eveningGreetings[user.eveningGreetingIndex];
+        const greetingTemplate = eveningGreetings[user.eveningGreetingIndex];
+        const greeting = greetingTemplate.replace("{name}", user.name);
         user.eveningGreetingIndex =
           (user.eveningGreetingIndex + 1) % eveningGreetings.length;
         await saveUserData(user);
         const factMessage = await getAndMarkRandomFact(user);
-        const greetingMessage = `${greeting}, ${user.name}!\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
+        const greetingMessage = `${greeting}\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
         await bot.sendMessage(user.chatId, greetingMessage, {
           parse_mode: "HTML",
         });
