@@ -29,6 +29,8 @@ async function getUserData(chatId, msg = {}) {
     state: null,
     sentFacts: [],
     factCount: 0,
+    morningGreetingIndex: 0,
+    eveningGreetingIndex: 0,
   };
 
   if (!user) {
@@ -92,6 +94,8 @@ async function saveUserData(user) {
         state: user.state,
         sentFacts: user.sentFacts,
         factCount: user.factCount,
+        morningGreetingIndex: user.morningGreetingIndex,
+        eveningGreetingIndex: user.eveningGreetingIndex,
       },
     }
   );

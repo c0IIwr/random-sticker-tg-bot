@@ -9,6 +9,22 @@ const {
 } = require("./userUtils");
 const nameVariants = require("./nameVariants");
 
+const morningGreetings = [
+  "Доброе утречко! 🌞",
+  "С добрым утром! ☀️",
+  "Привет, соня! 😊",
+  "Утро доброе! 🌅",
+  "Доброго утра! 🌼",
+];
+
+const eveningGreetings = [
+  "Спокойной ночки! 🌙",
+  "Сладких снов! 🌟",
+  "Доброй ночи! 🌌",
+  "Приятных снов! 🌠",
+  "Споки-ноки! 🌃",
+];
+
 function setupGreetings(
   bot,
   allStickers,
@@ -445,8 +461,12 @@ function setupGreetings(
         user.morningTime &&
         nowInUserOffset.format("HH:mm") === user.morningTime
       ) {
+        const greeting = morningGreetings[user.morningGreetingIndex];
+        user.morningGreetingIndex =
+          (user.morningGreetingIndex + 1) % morningGreetings.length;
+        await saveUserData(user);
         const factMessage = await getAndMarkRandomFact(user);
-        const greetingMessage = `Доброе утречко, ${user.name}! 🌞\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
+        const greetingMessage = `${greeting}, ${user.name}!\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
         await bot.sendMessage(user.chatId, greetingMessage, {
           parse_mode: "HTML",
         });
@@ -466,8 +486,12 @@ function setupGreetings(
         user.eveningTime &&
         nowInUserOffset.format("HH:mm") === user.eveningTime
       ) {
+        const greeting = eveningGreetings[user.eveningGreetingIndex];
+        user.eveningGreetingIndex =
+          (user.eveningGreetingIndex + 1) % eveningGreetings.length;
+        await saveUserData(user);
         const factMessage = await getAndMarkRandomFact(user);
-        const greetingMessage = `Спокойной ночки, ${user.name}! 🌙\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
+        const greetingMessage = `${greeting}, ${user.name}!\n\n<tg-spoiler>${factMessage}</tg-spoiler>`;
         await bot.sendMessage(user.chatId, greetingMessage, {
           parse_mode: "HTML",
         });
