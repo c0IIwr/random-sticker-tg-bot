@@ -131,6 +131,11 @@ async function updateUserDataInSheet(user) {
   const firstSent = formatDate(user.firstSent);
   const lastSent = formatDate(user.lastSent);
 
+  const name = user.name || "";
+  const eveningTime = user.eveningTime || "";
+  const morningTime = user.morningTime || "";
+  const timezone = user.timezone || "";
+
   const headersRange = "Data!A1:Z1";
   const headersResponse = await sheets.spreadsheets.values.get({
     spreadsheetId,
@@ -152,6 +157,10 @@ async function updateUserDataInSheet(user) {
     factCount,
     firstSent,
     lastSent,
+    name,
+    eveningTime,
+    morningTime,
+    timezone,
   };
 
   const dataRange = "Data!A2:Z";
