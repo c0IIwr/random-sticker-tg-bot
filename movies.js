@@ -66,19 +66,6 @@ module.exports = [
     watchUrl: "https://reyohoho.github.io/reyohoho/movie/842712",
   },
   {
-    title: "Старик и море",
-    year: 1999,
-    originalTitle: "The Old Man and the Sea",
-    country: "Канада, Япония, Россия",
-    genres: "драма, приключения, мультфильм, короткометражка",
-    duration: "20 мин.",
-    description:
-      "История дружбы между маленьким деревенским мальчишкой и старым рыбаком. Сантьяго, сильный и гордый человек, он не может смириться с неумолимым течением времени, отнимающем физические силы.",
-    posterUrl:
-      "https://kinopoiskapiunofficial.tech/images/posters/kp/26270.jpg",
-    watchUrl: "https://reyohoho.github.io/reyohoho/movie/26270",
-  },
-  {
     title: "Киви!",
     year: 2006,
     originalTitle: "Kiwi!",
@@ -101,19 +88,6 @@ module.exports = [
       "Позитивный красочный мульт, про птичек на проводе. Мелкие воробьи vs Большая птица. Но хорошо смеется тот, кто смеется последний.",
     posterUrl: "https://kinopoiskapiunofficial.tech/images/posters/kp/672.jpg",
     watchUrl: "https://reyohoho.github.io/reyohoho/movie/672",
-  },
-  {
-    title: "Отец и дочь",
-    year: 2000,
-    originalTitle: "Father and Daughter",
-    country: "Великобритания, Нидерланды, Бельгия",
-    genres: "драма, мультфильм, короткометражка",
-    duration: "8 мин.",
-    description:
-      "Маленькая девочка тоскует по исчезнувшему отцу. Сменяются времена года, проходят годы… Девочка становится взрослой, обзаводится семьей, стареет, но глубокая печаль по отцу остается с ней.",
-    posterUrl:
-      "https://kinopoiskapiunofficial.tech/images/posters/kp/120540.jpg",
-    watchUrl: "https://reyohoho.github.io/reyohoho/movie/120540",
   },
   {
     title: "Игра Джери",
@@ -153,18 +127,5 @@ module.exports = [
     posterUrl:
       "https://kinopoiskapiunofficial.tech/images/posters/kp/1115649.jpg",
     watchUrl: "https://reyohoho.github.io/reyohoho/movie/1115649",
-  },
-  {
-    title: "Голова-гора",
-    year: 2002,
-    originalTitle: "Atama-yama",
-    country: "Япония",
-    genres: "фэнтези, комедия, мультфильм, короткометражка, аниме",
-    duration: "10 мин.",
-    description:
-      "Очень скупой человек проглатывает несколько вишневых косточек вместо того, чтобы выбросить их, и одна из них пускает побеги у него на голове. Дерево растет, а в период цветения люди приходят отдохнуть в его тени…",
-    posterUrl:
-      "https://kinopoiskapiunofficial.tech/images/posters/kp/149705.jpg",
-    watchUrl: "https://reyohoho.github.io/reyohoho/movie/149705",
   },
 ];
