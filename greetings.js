@@ -118,13 +118,20 @@ function setupGreetings(
     const user = await getUserData(chatId, msg);
     await updateUserCommands(chatId);
 
-    if (user.lastHelloMessageId) {
-      try {
-        await bot.deleteMessage(chatId, user.lastHelloMessageId);
-      } catch (error) {
-        console.error(`Не удалось удалить сообщение: ${error.message}`);
+    user.helloMessages = user.helloMessages || [];
+    user.timeRequestMessages = user.timeRequestMessages || [];
+
+    if (user.helloMessages.length > 0) {
+      for (const messageId of user.helloMessages) {
+        try {
+          await bot.deleteMessage(chatId, messageId);
+        } catch (error) {
+          console.error(
+            `Не удалось удалить сообщение ${messageId}: ${error.message}`
+          );
+        }
       }
-      user.lastHelloMessageId = null;
+      user.helloMessages = [];
     }
 
     await resetUserState(chatId);
@@ -135,6 +142,7 @@ function setupGreetings(
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       user.state = "waiting_for_name";
       await saveUserData(user);
     } else {
@@ -172,7 +180,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.lastHelloMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     }
   });
@@ -182,6 +190,9 @@ function setupGreetings(
       const chatId = msg.chat.id.toString();
       const user = await getUserData(chatId, msg);
       const text = msg.text.trim();
+
+      user.helloMessages = user.helloMessages || [];
+      user.timeRequestMessages = user.timeRequestMessages || [];
 
       if (user.state === "waiting_for_name") {
         if (/котик/i.test(text)) {
@@ -240,7 +251,7 @@ function setupGreetings(
           const sentMessage = await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
-          user.lastMessageId = sentMessage.message_id;
+          user.helloMessages.push(sentMessage.message_id);
           user.state = "choosing_name";
           await saveUserData(user);
         } else {
@@ -262,7 +273,7 @@ function setupGreetings(
           const sentMessage = await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
-          user.lastMessageId = sentMessage.message_id;
+          user.helloMessages.push(sentMessage.message_id);
           await saveUserData(user);
         }
       } else if (
@@ -296,9 +307,17 @@ function setupGreetings(
             }
             user.state = null;
 
-            if (user.lastRequestMessageId) {
-              await bot.deleteMessage(chatId, user.lastRequestMessageId);
-              user.lastRequestMessageId = null;
+            if (user.timeRequestMessages.length > 0) {
+              for (const messageId of user.timeRequestMessages) {
+                try {
+                  await bot.deleteMessage(chatId, messageId);
+                } catch (error) {
+                  console.error(
+                    `Не удалось удалить сообщение ${messageId}: ${error.message}`
+                  );
+                }
+              }
+              user.timeRequestMessages = [];
             }
             await bot.deleteMessage(chatId, msg.message_id);
 
@@ -343,19 +362,23 @@ function setupGreetings(
             const sentMessage = await bot.sendMessage(chatId, message, {
               reply_markup: JSON.stringify(keyboard),
             });
-            user.lastMessageId = sentMessage.message_id;
+            user.helloMessages.push(sentMessage.message_id);
             await saveUserData(user);
           } else {
-            await bot.sendMessage(
+            const sentMessage = await bot.sendMessage(
               chatId,
               "Укажи время, например, 23:59 или 23:59 UTC+10"
             );
+            user.timeRequestMessages.push(sentMessage.message_id);
+            await saveUserData(user);
           }
         } else {
-          await bot.sendMessage(
+          const sentMessage = await bot.sendMessage(
             chatId,
             "Укажи время, например, 23:59 или 23:59 UTC+10"
           );
+          user.timeRequestMessages.push(sentMessage.message_id);
+          await saveUserData(user);
         }
       }
     }
@@ -366,6 +389,9 @@ function setupGreetings(
     const messageId = query.message.message_id;
     const data = query.data;
     const user = await getUserData(chatId);
+
+    user.helloMessages = user.helloMessages || [];
+    user.timeRequestMessages = user.timeRequestMessages || [];
 
     if (data.startsWith("choose_name_")) {
       const chosenName = data.replace("choose_name_", "");
@@ -386,7 +412,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.lastMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "keep_name") {
       user.state = null;
@@ -405,7 +431,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.lastMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "set_morning") {
       await bot.deleteMessage(chatId, messageId);
@@ -414,6 +440,8 @@ function setupGreetings(
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
+      user.timeRequestMessages.push(sentMessage.message_id);
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
@@ -423,6 +451,8 @@ function setupGreetings(
         "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
+      user.timeRequestMessages.push(sentMessage.message_id);
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
     } else if (data === "reset_morning") {
@@ -446,7 +476,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.lastMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "reset_evening") {
       user.eveningTime = null;
@@ -469,7 +499,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.lastMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "forget_name") {
       user.name = null;
@@ -493,7 +523,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.lastMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "introduce") {
       await bot.deleteMessage(chatId, messageId);
@@ -502,6 +532,7 @@ function setupGreetings(
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloMessages.push(sentMessage.message_id);
       user.state = "waiting_for_name";
       await saveUserData(user);
     }
