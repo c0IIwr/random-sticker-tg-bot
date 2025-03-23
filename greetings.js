@@ -138,6 +138,30 @@ function setupGreetings(
       user.helloMessages = [];
     }
 
+    if (user.lastRequestMessageId) {
+      try {
+        await bot.deleteMessage(chatId, user.lastRequestMessageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
+        );
+      }
+      user.lastRequestMessageId = null;
+    }
+
+    if (user.timeRequestMessages.length > 0) {
+      for (const messageId of user.timeRequestMessages) {
+        try {
+          await bot.deleteMessage(chatId, messageId);
+        } catch (error) {
+          console.error(
+            `Не удалось удалить сообщение ${messageId}: ${error.message}`
+          );
+        }
+      }
+      user.timeRequestMessages = [];
+    }
+
     await resetUserState(chatId);
 
     if (!user.name) {
@@ -401,7 +425,6 @@ function setupGreetings(
               "Укажи время, например, 23:59 или 23:59 UTC+10"
             );
             user.timeRequestMessages.push(sentMessage.message_id);
-            user.lastRequestMessageId = sentMessage.message_id;
             await saveUserData(user);
           }
         } else {
@@ -410,7 +433,6 @@ function setupGreetings(
             "Укажи время, например, 23:59 или 23:59 UTC+10"
           );
           user.timeRequestMessages.push(sentMessage.message_id);
-          user.lastRequestMessageId = sentMessage.message_id;
           await saveUserData(user);
         }
       }
@@ -495,6 +517,7 @@ function setupGreetings(
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.timeRequestMessages.push(sentMessage.message_id);
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
@@ -510,6 +533,7 @@ function setupGreetings(
         "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.timeRequestMessages.push(sentMessage.message_id);
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
     } else if (data === "reset_morning") {
