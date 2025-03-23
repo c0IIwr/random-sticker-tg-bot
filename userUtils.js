@@ -35,6 +35,7 @@ async function getUserData(chatId, msg = {}) {
     timeRequestMessages: [],
     userTimeInputMessages: [],
     lastHelloCommandId: null,
+    lastRequestMessageId: null,
   };
 
   if (!user) {
@@ -104,6 +105,7 @@ async function saveUserData(user) {
         timeRequestMessages: user.timeRequestMessages,
         userTimeInputMessages: user.userTimeInputMessages,
         lastHelloCommandId: user.lastHelloCommandId,
+        lastRequestMessageId: user.lastRequestMessageId,
       },
     }
   );

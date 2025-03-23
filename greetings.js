@@ -96,19 +96,11 @@ function setupGreetings(
               text: "Сбросить время на ночь 🌙",
               callback_data: "reset_evening",
             }
-          : {
-              text: "Время ложиться спать 🌙",
-              callback_data: "set_evening",
-            },
+          : { text: "Время ложиться спать 🌙", callback_data: "set_evening" },
       ],
     ];
     if (includeForgetName) {
-      buttons.push([
-        {
-          text: "Забыть имя 🙈",
-          callback_data: "forget_name",
-        },
-      ]);
+      buttons.push([{ text: "Забыть имя 🙈", callback_data: "forget_name" }]);
     }
     return { inline_keyboard: buttons };
   }
@@ -154,7 +146,6 @@ function setupGreetings(
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
       user.lastRequestMessageId = sentMessage.message_id;
-      user.helloMessages.push(sentMessage.message_id);
       user.state = "waiting_for_name";
       await saveUserData(user);
     } else {
@@ -214,26 +205,24 @@ function setupGreetings(
 
         const inputName = text.trim();
         user.name = inputName;
-        await saveUserData(user);
 
-        await bot.deleteMessage(chatId, msg.message_id);
-
-        if (user.helloMessages.length > 0) {
-          console.log(
-            `Попытка удалить сообщения: ${JSON.stringify(user.helloMessages)}`
+        try {
+          await bot.deleteMessage(chatId, msg.message_id);
+        } catch (error) {
+          console.error(
+            `Не удалось удалить сообщение ${msg.message_id}: ${error.message}`
           );
-          for (const messageId of user.helloMessages) {
-            try {
-              await bot.deleteMessage(chatId, messageId);
-              console.log(`Удалено сообщение ${messageId}`);
-              console.log(`Чат: ${chatId}, Сообщение: ${messageId}`);
-            } catch (error) {
-              console.error(
-                `Не удалось удалить сообщение ${messageId}: ${error.message}`
-              );
-            }
+        }
+
+        if (user.lastRequestMessageId) {
+          try {
+            await bot.deleteMessage(chatId, user.lastRequestMessageId);
+          } catch (error) {
+            console.error(
+              `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
+            );
           }
-          user.helloMessages = [];
+          user.lastRequestMessageId = null;
         }
 
         const inputNameLower = inputName.toLowerCase();
@@ -278,12 +267,11 @@ function setupGreetings(
           const sentMessage = await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
-          user.helloMessages.push(sentMessage.message_id);
+          user.lastRequestMessageId = sentMessage.message_id;
           user.state = "choosing_name";
           await saveUserData(user);
         } else {
           user.state = null;
-          await saveUserData(user);
           await updateUserCommands(chatId);
           const message = `Приятно познакомиться, ${inputName}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
           const keyboard = {
@@ -307,10 +295,16 @@ function setupGreetings(
         user.state === "waiting_for_morning_time" ||
         user.state === "waiting_for_evening_time"
       ) {
-        user.userTimeInputMessages.push(msg.message_id);
-
         const timeRegex = /^(\d{1,2}):(\d{2})(?:\s*(UTC[+-]\d+))?$/;
         const match = text.match(timeRegex);
+
+        try {
+          await bot.deleteMessage(chatId, msg.message_id);
+        } catch (error) {
+          console.error(
+            `Не удалось удалить сообщение ${msg.message_id}: ${error.message}`
+          );
+        }
 
         if (match) {
           const hours = parseInt(match[1], 10);
@@ -336,6 +330,17 @@ function setupGreetings(
             }
             user.state = null;
 
+            if (user.lastRequestMessageId) {
+              try {
+                await bot.deleteMessage(chatId, user.lastRequestMessageId);
+              } catch (error) {
+                console.error(
+                  `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
+                );
+              }
+              user.lastRequestMessageId = null;
+            }
+
             if (user.timeRequestMessages.length > 0) {
               for (const messageId of user.timeRequestMessages) {
                 try {
@@ -348,21 +353,6 @@ function setupGreetings(
               }
               user.timeRequestMessages = [];
             }
-
-            if (user.userTimeInputMessages.length > 0) {
-              for (const messageId of user.userTimeInputMessages) {
-                try {
-                  await bot.deleteMessage(chatId, messageId);
-                } catch (error) {
-                  console.error(
-                    `Не удалось удалить сообщение ${messageId}: ${error.message}`
-                  );
-                }
-              }
-              user.userTimeInputMessages = [];
-            }
-
-            await saveUserData(user);
 
             const tzText = formatTimezone(offset);
             const remaining = calculateRemainingTime(
@@ -411,6 +401,7 @@ function setupGreetings(
               "Укажи время, например, 23:59 или 23:59 UTC+10"
             );
             user.timeRequestMessages.push(sentMessage.message_id);
+            user.lastRequestMessageId = sentMessage.message_id;
             await saveUserData(user);
           }
         } else {
@@ -419,6 +410,7 @@ function setupGreetings(
             "Укажи время, например, 23:59 или 23:59 UTC+10"
           );
           user.timeRequestMessages.push(sentMessage.message_id);
+          user.lastRequestMessageId = sentMessage.message_id;
           await saveUserData(user);
         }
       }
@@ -438,9 +430,17 @@ function setupGreetings(
       const chosenName = data.replace("choose_name_", "");
       user.name = chosenName;
       user.state = null;
-      await saveUserData(user);
+
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
+      user.lastRequestMessageId = null;
+
       await updateUserCommands(chatId);
-      await bot.deleteMessage(chatId, messageId);
       const message = `Отлично, ${chosenName}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
       const keyboard = {
         inline_keyboard: [
@@ -457,9 +457,17 @@ function setupGreetings(
       await saveUserData(user);
     } else if (data === "keep_name") {
       user.state = null;
-      await saveUserData(user);
+
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
+      user.lastRequestMessageId = null;
+
       await updateUserCommands(chatId);
-      await bot.deleteMessage(chatId, messageId);
       const message = `Отлично, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
       const keyboard = {
         inline_keyboard: [
@@ -475,31 +483,46 @@ function setupGreetings(
       user.helloMessages.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "set_morning") {
-      await bot.deleteMessage(chatId, messageId);
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
       const sentMessage = await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
-      user.helloMessages.push(sentMessage.message_id);
-      user.timeRequestMessages.push(sentMessage.message_id);
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
-      await bot.deleteMessage(chatId, messageId);
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
       const sentMessage = await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
-      user.helloMessages.push(sentMessage.message_id);
-      user.timeRequestMessages.push(sentMessage.message_id);
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
     } else if (data === "reset_morning") {
       user.morningTime = null;
-      await saveUserData(user);
-      await bot.deleteMessage(chatId, messageId);
+
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
+
       let message = "Время на утро сброшено 👍";
       if (user.eveningTime) {
         const remaining = calculateRemainingTime(user, "evening");
@@ -521,8 +544,15 @@ function setupGreetings(
       await saveUserData(user);
     } else if (data === "reset_evening") {
       user.eveningTime = null;
-      await saveUserData(user);
-      await bot.deleteMessage(chatId, messageId);
+
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
+
       let message = "Время на ночь сброшено 👍";
       if (user.morningTime) {
         const remaining = calculateRemainingTime(user, "morning");
@@ -547,33 +577,40 @@ function setupGreetings(
       user.morningTime = null;
       user.eveningTime = null;
       user.state = "waiting_for_name";
-      await saveUserData(user);
-      await updateUserCommands(chatId);
-      await bot.deleteMessage(chatId, messageId);
+
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
+
       const message = "Ты кто? 🤨";
       const keyboard = {
         inline_keyboard: [
-          [
-            {
-              text: "Познакомиться 👋",
-              callback_data: "introduce",
-            },
-          ],
+          [{ text: "Познакомиться 👋", callback_data: "introduce" }],
         ],
       };
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.helloMessages.push(sentMessage.message_id);
+      user.lastRequestMessageId = sentMessage.message_id;
       await saveUserData(user);
     } else if (data === "introduce") {
-      await bot.deleteMessage(chatId, messageId);
+      try {
+        await bot.deleteMessage(chatId, messageId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${messageId}: ${error.message}`
+        );
+      }
+
       const sentMessage = await bot.sendMessage(
         chatId,
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
       user.lastRequestMessageId = sentMessage.message_id;
-      user.helloMessages.push(sentMessage.message_id);
       user.state = "waiting_for_name";
       await saveUserData(user);
     }
