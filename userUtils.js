@@ -31,6 +31,10 @@ async function getUserData(chatId, msg = {}) {
     factCount: 0,
     morningGreetingIndex: 0,
     eveningGreetingIndex: 0,
+    helloMessages: [],
+    timeRequestMessages: [],
+    userTimeInputMessages: [],
+    lastHelloCommandId: null,
   };
 
   if (!user) {
@@ -96,6 +100,10 @@ async function saveUserData(user) {
         factCount: user.factCount,
         morningGreetingIndex: user.morningGreetingIndex,
         eveningGreetingIndex: user.eveningGreetingIndex,
+        helloMessages: user.helloMessages,
+        timeRequestMessages: user.timeRequestMessages,
+        userTimeInputMessages: user.userTimeInputMessages,
+        lastHelloCommandId: user.lastHelloCommandId,
       },
     }
   );
