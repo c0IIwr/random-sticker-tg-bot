@@ -217,10 +217,7 @@ function setupGreetings(
         await saveUserData(user);
 
         await bot.deleteMessage(chatId, msg.message_id);
-        if (user.lastRequestMessageId) {
-          await bot.deleteMessage(chatId, user.lastRequestMessageId);
-          user.lastRequestMessageId = null;
-        }
+
         if (user.helloMessages.length > 0) {
           for (const messageId of user.helloMessages) {
             try {
