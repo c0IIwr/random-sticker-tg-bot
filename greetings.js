@@ -219,9 +219,14 @@ function setupGreetings(
         await bot.deleteMessage(chatId, msg.message_id);
 
         if (user.helloMessages.length > 0) {
+          console.log(
+            `Попытка удалить сообщения: ${JSON.stringify(user.helloMessages)}`
+          );
           for (const messageId of user.helloMessages) {
             try {
               await bot.deleteMessage(chatId, messageId);
+              console.log(`Удалено сообщение ${messageId}`);
+              console.log(`Чат: ${chatId}, Сообщение: ${messageId}`);
             } catch (error) {
               console.error(
                 `Не удалось удалить сообщение ${messageId}: ${error.message}`
