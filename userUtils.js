@@ -43,6 +43,9 @@ async function getUserData(chatId, msg = {}) {
     startBotMessageIds: [],
     resetBotMessageIds: [],
     infoBotMessageIds: [],
+    stickerSets: [],
+    currentSet: "Стикеры с котиками",
+    lastCustomSet: null,
   };
 
   if (!user) {
@@ -120,6 +123,9 @@ async function saveUserData(user) {
         startBotMessageIds: user.startBotMessageIds,
         resetBotMessageIds: user.resetBotMessageIds,
         infoBotMessageIds: user.infoBotMessageIds,
+        stickerSets: user.stickerSets,
+        currentSet: user.currentSet,
+        lastCustomSet: user.lastCustomSet,
       },
     }
   );
