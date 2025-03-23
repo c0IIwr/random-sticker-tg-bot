@@ -583,14 +583,22 @@ bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {
     const chatId = msg.chat.id.toString();
     const user = await getUserData(chatId, msg);
-    const text = msg.text.trim().toLowerCase();
+    const text = msg.text.trim();
 
-    if (["/start", "/reset", "/info"].includes(text)) {
-      user.userCommandMessages.push(msg.message_id);
+    if (user.state === "waiting_for_set_name") {
+      const setName = text;
+      await addStickerSet(user, setName);
+      await bot.deleteMessage(chatId, user.lastRequestMessageId);
+      await bot.deleteMessage(chatId, msg.message_id);
+      const sentMessage = await bot.sendMessage(
+        chatId,
+        `Добавлен набор "${setName}", а теперь отправь стикер. Из этого стикерпака будет выбираться случайный стикер.`
+      );
+      user.state = "waiting_for_sticker";
+      user.lastRequestMessageId = sentMessage.message_id;
       await saveUserData(user);
-    }
-
-    if (isOnlyEmojis(text)) {
+      await updateUserCommands(chatId);
+    } else if (isOnlyEmojis(text)) {
       const userEmojis = text.match(regex);
       if (userEmojis && userEmojis.length > 0) {
         const matchingStickers = allStickers.filter((sticker) => {
@@ -610,10 +618,8 @@ bot.on("message", async (msg) => {
     const user = await getUserData(chatId, msg);
     const setName = user.lastCustomSet;
     const result = await addStickerPackToSet(bot, user, setName, msg.sticker);
-
     await bot.deleteMessage(chatId, user.lastRequestMessageId);
     await bot.deleteMessage(chatId, msg.message_id);
-
     const keyboard = {
       inline_keyboard: [
         [
@@ -665,7 +671,6 @@ bot.on("callback_query", async (query) => {
   const user = await getUserData(chatId);
 
   if (data === "choose_set") {
-    await bot.deleteMessage(chatId, query.message.message_id);
     const keyboard = { inline_keyboard: [] };
     if (user.currentSet === "Стикеры с котиками") {
       keyboard.inline_keyboard.push([
@@ -702,8 +707,9 @@ bot.on("callback_query", async (query) => {
         },
       ]);
     }
-    await bot.sendMessage(chatId, "Выбери набор:", {
-      reply_markup: JSON.stringify(keyboard),
+    await bot.editMessageReplyMarkup(JSON.stringify(keyboard), {
+      chat_id: chatId,
+      message_id: query.message.message_id,
     });
   } else if (data.startsWith("select_set_")) {
     const setName = data.replace("select_set_", "");
@@ -736,7 +742,7 @@ bot.on("callback_query", async (query) => {
     await bot.deleteMessage(chatId, query.message.message_id);
     const sentMessage = await bot.sendMessage(
       chatId,
-      "Выбери название для нового набора"
+      "Напиши название для нового набора"
     );
     user.state = "waiting_for_set_name";
     user.lastRequestMessageId = sentMessage.message_id;
