@@ -425,9 +425,25 @@ async function resetSentStickers(chatId, silent = false) {
   }
 }
 
+async function deleteMessages(chatId, messageIds) {
+  for (const messageId of messageIds) {
+    try {
+      await bot.deleteMessage(chatId, messageId);
+    } catch (error) {}
+  }
+}
+
 bot.onText(/\/reset/, async (msg) => {
   const chatId = msg.chat.id.toString();
   await resetUserState(chatId);
+  const user = await getUserData(chatId, msg);
+
+  await deleteMessages(chatId, user.resetMessageIds);
+  user.resetMessageIds = [msg.message_id];
+
+  await deleteMessages(chatId, user.userCommandMessages);
+  user.userCommandMessages = [];
+
   const keyboard = {
     inline_keyboard: [
       [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
@@ -440,6 +456,8 @@ bot.onText(/\/reset/, async (msg) => {
       reply_markup: JSON.stringify(keyboard),
     }
   );
+
+  await saveUserData(user);
 });
 
 async function sendInfo(chatId) {
@@ -481,7 +499,17 @@ async function sendInfo(chatId) {
 bot.onText(/\/info/, async (msg) => {
   const chatId = msg.chat.id.toString();
   await resetUserState(chatId);
-  sendInfo(chatId);
+  const user = await getUserData(chatId, msg);
+
+  await deleteMessages(chatId, user.infoMessageIds);
+  user.infoMessageIds = [msg.message_id];
+
+  await deleteMessages(chatId, user.userCommandMessages);
+  user.userCommandMessages = [];
+
+  await sendInfo(chatId);
+
+  await saveUserData(user);
 });
 
 bot.onText(/котик/i, async (msg) => {
@@ -503,6 +531,13 @@ bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
   await resetUserState(chatId);
   const user = await getUserData(chatId, msg);
+
+  await deleteMessages(chatId, user.startMessageIds);
+  user.startMessageIds = [msg.message_id];
+
+  await deleteMessages(chatId, user.userCommandMessages);
+  user.userCommandMessages = [];
+
   await updateUserCommands(chatId);
   const keyboard = {
     inline_keyboard: [
@@ -516,16 +551,24 @@ bot.onText(/\/start/, async (msg) => {
       reply_markup: JSON.stringify(keyboard),
     }
   );
+
+  await saveUserData(user);
 });
 
 bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {
-    const text = msg.text.trim();
+    const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId, msg);
+    const text = msg.text.trim().toLowerCase();
+
+    if (["/start", "/reset", "/info"].includes(text)) {
+      user.userCommandMessages.push(msg.message_id);
+      await saveUserData(user);
+    }
+
     if (isOnlyEmojis(text)) {
       const userEmojis = text.match(regex);
       if (userEmojis && userEmojis.length > 0) {
-        const chatId = msg.chat.id.toString();
-        const user = await getUserData(chatId, msg);
         const matchingStickers = allStickers.filter((sticker) => {
           const stickerEmojis = splitEmojis(sticker.emoji);
           return userEmojis.some((emoji) => stickerEmojis.includes(emoji));
@@ -569,9 +612,7 @@ bot.on("callback_query", async (query) => {
   if (data === "confirm_reset") {
     try {
       await bot.deleteMessage(chatId, query.message.message_id);
-    } catch (error) {
-      console.error("Ошибка при удалении сообщения:", error);
-    }
+    } catch (error) {}
     await resetSentStickers(chatId);
   } else if (data === "random_sticker") {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
