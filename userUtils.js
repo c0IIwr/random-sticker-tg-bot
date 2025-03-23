@@ -40,6 +40,9 @@ async function getUserData(chatId, msg = {}) {
     resetMessageIds: [],
     infoMessageIds: [],
     userCommandMessages: [],
+    startBotMessageIds: [],
+    resetBotMessageIds: [],
+    infoBotMessageIds: [],
   };
 
   if (!user) {
@@ -114,6 +117,9 @@ async function saveUserData(user) {
         resetMessageIds: user.resetMessageIds,
         infoMessageIds: user.infoMessageIds,
         userCommandMessages: user.userCommandMessages,
+        startBotMessageIds: user.startBotMessageIds,
+        resetBotMessageIds: user.resetBotMessageIds,
+        infoBotMessageIds: user.infoBotMessageIds,
       },
     }
   );

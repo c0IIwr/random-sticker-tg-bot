@@ -441,6 +441,9 @@ bot.onText(/\/reset/, async (msg) => {
   await deleteMessages(chatId, user.resetMessageIds);
   user.resetMessageIds = [msg.message_id];
 
+  await deleteMessages(chatId, user.resetBotMessageIds);
+  user.resetBotMessageIds = [];
+
   await deleteMessages(chatId, user.userCommandMessages);
   user.userCommandMessages = [];
 
@@ -449,7 +452,7 @@ bot.onText(/\/reset/, async (msg) => {
       [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
     ],
   };
-  bot.sendMessage(
+  const sentMessage = await bot.sendMessage(
     chatId,
     "Ты точно хочешь сбросить список отправленных стикеров? 🤔",
     {
@@ -457,6 +460,7 @@ bot.onText(/\/reset/, async (msg) => {
     }
   );
 
+  user.resetBotMessageIds.push(sentMessage.message_id);
   await saveUserData(user);
 });
 
@@ -482,7 +486,10 @@ async function sendInfo(chatId) {
       infoMessage += `\n\n<i><tg-spoiler>Говорят, если закончатся стикеры, то покажут мультик 🤭</tg-spoiler></i>`;
     }
 
-    bot.sendMessage(chatId, infoMessage, { parse_mode: "HTML" });
+    const sentMessage = await bot.sendMessage(chatId, infoMessage, {
+      parse_mode: "HTML",
+    });
+    return sentMessage;
   } catch (error) {
     console.error("Ошибка в команде /info:", error);
     const keyboard = {
@@ -490,9 +497,14 @@ async function sendInfo(chatId) {
         [{ text: "Разбудить котят 🫣", callback_data: "retry_info" }],
       ],
     };
-    bot.sendMessage(chatId, "Котики спят 😴 Попробуйте позже ⌛️", {
-      reply_markup: JSON.stringify(keyboard),
-    });
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      "Котики спят 😴 Попробуйте позже ⌛️",
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
+    );
+    return sentMessage;
   }
 }
 
@@ -504,11 +516,15 @@ bot.onText(/\/info/, async (msg) => {
   await deleteMessages(chatId, user.infoMessageIds);
   user.infoMessageIds = [msg.message_id];
 
+  await deleteMessages(chatId, user.infoBotMessageIds);
+  user.infoBotMessageIds = [];
+
   await deleteMessages(chatId, user.userCommandMessages);
   user.userCommandMessages = [];
 
-  await sendInfo(chatId);
+  const sentMessage = await sendInfo(chatId);
 
+  user.infoBotMessageIds.push(sentMessage.message_id);
   await saveUserData(user);
 });
 
@@ -535,6 +551,9 @@ bot.onText(/\/start/, async (msg) => {
   await deleteMessages(chatId, user.startMessageIds);
   user.startMessageIds = [msg.message_id];
 
+  await deleteMessages(chatId, user.startBotMessageIds);
+  user.startBotMessageIds = [];
+
   await deleteMessages(chatId, user.userCommandMessages);
   user.userCommandMessages = [];
 
@@ -544,7 +563,7 @@ bot.onText(/\/start/, async (msg) => {
       [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
     ],
   };
-  await bot.sendMessage(
+  const sentMessage = await bot.sendMessage(
     chatId,
     "Нажми кнопку, чтобы получить стикер с котиком 🤗",
     {
@@ -552,6 +571,7 @@ bot.onText(/\/start/, async (msg) => {
     }
   );
 
+  user.startBotMessageIds.push(sentMessage.message_id);
   await saveUserData(user);
 });
 
