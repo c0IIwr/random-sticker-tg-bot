@@ -120,6 +120,18 @@ function setupGreetings(
 
     user.helloMessages = user.helloMessages || [];
     user.timeRequestMessages = user.timeRequestMessages || [];
+    user.userTimeInputMessages = user.userTimeInputMessages || [];
+
+    if (user.lastHelloCommandId) {
+      try {
+        await bot.deleteMessage(chatId, user.lastHelloCommandId);
+      } catch (error) {
+        console.error(
+          `Не удалось удалить сообщение ${user.lastHelloCommandId}: ${error.message}`
+        );
+      }
+    }
+    user.lastHelloCommandId = msg.message_id;
 
     if (user.helloMessages.length > 0) {
       for (const messageId of user.helloMessages) {
@@ -193,6 +205,7 @@ function setupGreetings(
 
       user.helloMessages = user.helloMessages || [];
       user.timeRequestMessages = user.timeRequestMessages || [];
+      user.userTimeInputMessages = user.userTimeInputMessages || [];
 
       if (user.state === "waiting_for_name") {
         if (/котик/i.test(text)) {
@@ -207,6 +220,18 @@ function setupGreetings(
         if (user.lastRequestMessageId) {
           await bot.deleteMessage(chatId, user.lastRequestMessageId);
           user.lastRequestMessageId = null;
+        }
+        if (user.helloMessages.length > 0) {
+          for (const messageId of user.helloMessages) {
+            try {
+              await bot.deleteMessage(chatId, messageId);
+            } catch (error) {
+              console.error(
+                `Не удалось удалить сообщение ${messageId}: ${error.message}`
+              );
+            }
+          }
+          user.helloMessages = [];
         }
 
         const inputNameLower = inputName.toLowerCase();
@@ -280,6 +305,8 @@ function setupGreetings(
         user.state === "waiting_for_morning_time" ||
         user.state === "waiting_for_evening_time"
       ) {
+        user.userTimeInputMessages.push(msg.message_id);
+
         const timeRegex = /^(\d{1,2}):(\d{2})(?:\s*(UTC[+-]\d+))?$/;
         const match = text.match(timeRegex);
 
@@ -319,7 +346,19 @@ function setupGreetings(
               }
               user.timeRequestMessages = [];
             }
-            await bot.deleteMessage(chatId, msg.message_id);
+
+            if (user.userTimeInputMessages.length > 0) {
+              for (const messageId of user.userTimeInputMessages) {
+                try {
+                  await bot.deleteMessage(chatId, messageId);
+                } catch (error) {
+                  console.error(
+                    `Не удалось удалить сообщение ${messageId}: ${error.message}`
+                  );
+                }
+              }
+              user.userTimeInputMessages = [];
+            }
 
             await saveUserData(user);
 
