@@ -580,9 +580,10 @@ bot.onText(/\/start/, async (msg) => {
 });
 
 bot.on("message", async (msg) => {
+  const chatId = msg.chat.id.toString();
+  const user = await getUserData(chatId, msg);
+
   if (msg.text && !msg.text.startsWith("/")) {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
     const text = msg.text.trim();
 
     if (user.state === "waiting_for_set_name") {
@@ -614,8 +615,6 @@ bot.on("message", async (msg) => {
       }
     }
   } else if (msg.sticker && user.state === "waiting_for_sticker") {
-    const chatId = msg.chat.id.toString();
-    const user = await getUserData(chatId, msg);
     const setName = user.lastCustomSet;
     const result = await addStickerPackToSet(bot, user, setName, msg.sticker);
     await bot.deleteMessage(chatId, user.lastRequestMessageId);
