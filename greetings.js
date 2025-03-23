@@ -419,18 +419,16 @@ function setupGreetings(
             user.helloMessages.push(sentMessage.message_id);
             await saveUserData(user);
           } else {
-            if (user.lastRequestMessageId) {
-              try {
-                await bot.deleteMessage(chatId, user.lastRequestMessageId);
-              } catch (error) {
-                console.error(
-                  `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-                );
-              }
-              user.lastRequestMessageId = null;
-            }
-
             if (user.timeRequestMessages.length === 0) {
+              if (user.lastRequestMessageId) {
+                try {
+                  await bot.deleteMessage(chatId, user.lastRequestMessageId);
+                } catch (error) {
+                  console.error(
+                    `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
+                  );
+                }
+              }
               const sentMessage = await bot.sendMessage(
                 chatId,
                 "Укажи время, например, 23:59 или 23:59 UTC+10"
@@ -441,18 +439,16 @@ function setupGreetings(
             }
           }
         } else {
-          if (user.lastRequestMessageId) {
-            try {
-              await bot.deleteMessage(chatId, user.lastRequestMessageId);
-            } catch (error) {
-              console.error(
-                `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-              );
-            }
-            user.lastRequestMessageId = null;
-          }
-
           if (user.timeRequestMessages.length === 0) {
+            if (user.lastRequestMessageId) {
+              try {
+                await bot.deleteMessage(chatId, user.lastRequestMessageId);
+              } catch (error) {
+                console.error(
+                  `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
+                );
+              }
+            }
             const sentMessage = await bot.sendMessage(
               chatId,
               "Укажи время, например, 23:59 или 23:59 UTC+10"
