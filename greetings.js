@@ -115,15 +115,26 @@ function setupGreetings(
 
   bot.onText(/\/hello/, async (msg) => {
     const chatId = msg.chat.id.toString();
-    await resetUserState(chatId);
     const user = await getUserData(chatId, msg);
     await updateUserCommands(chatId);
 
+    if (user.lastHelloMessageId) {
+      try {
+        await bot.deleteMessage(chatId, user.lastHelloMessageId);
+      } catch (error) {
+        console.error(`Не удалось удалить сообщение: ${error.message}`);
+      }
+      user.lastHelloMessageId = null;
+    }
+
+    await resetUserState(chatId);
+
     if (!user.name) {
-      await bot.sendMessage(
+      const sentMessage = await bot.sendMessage(
         chatId,
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
+      user.lastRequestMessageId = sentMessage.message_id;
       user.state = "waiting_for_name";
       await saveUserData(user);
     } else {
@@ -158,9 +169,11 @@ function setupGreetings(
       }
 
       const keyboard = getKeyboard(user, true);
-      await bot.sendMessage(chatId, message, {
+      const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+      user.lastHelloMessageId = sentMessage.message_id;
+      await saveUserData(user);
     }
   });
 
@@ -178,6 +191,12 @@ function setupGreetings(
         const inputName = text.trim();
         user.name = inputName;
         await saveUserData(user);
+
+        await bot.deleteMessage(chatId, msg.message_id);
+        if (user.lastRequestMessageId) {
+          await bot.deleteMessage(chatId, user.lastRequestMessageId);
+          user.lastRequestMessageId = null;
+        }
 
         const inputNameLower = inputName.toLowerCase();
         let foundVariants = [];
@@ -218,9 +237,10 @@ function setupGreetings(
             keyboard.inline_keyboard.push(row);
           }
 
-          await bot.sendMessage(chatId, message, {
+          const sentMessage = await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
+          user.lastMessageId = sentMessage.message_id;
           user.state = "choosing_name";
           await saveUserData(user);
         } else {
@@ -239,9 +259,11 @@ function setupGreetings(
               ],
             ],
           };
-          await bot.sendMessage(chatId, message, {
+          const sentMessage = await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
+          user.lastMessageId = sentMessage.message_id;
+          await saveUserData(user);
         }
       } else if (
         user.state === "waiting_for_morning_time" ||
@@ -273,6 +295,13 @@ function setupGreetings(
               user.eveningTime = timeStr;
             }
             user.state = null;
+
+            if (user.lastRequestMessageId) {
+              await bot.deleteMessage(chatId, user.lastRequestMessageId);
+              user.lastRequestMessageId = null;
+            }
+            await bot.deleteMessage(chatId, msg.message_id);
+
             await saveUserData(user);
 
             const tzText = formatTimezone(offset);
@@ -311,9 +340,11 @@ function setupGreetings(
             }
 
             const keyboard = getKeyboard(user, false);
-            await bot.sendMessage(chatId, message, {
+            const sentMessage = await bot.sendMessage(chatId, message, {
               reply_markup: JSON.stringify(keyboard),
             });
+            user.lastMessageId = sentMessage.message_id;
+            await saveUserData(user);
           } else {
             await bot.sendMessage(
               chatId,
@@ -332,6 +363,7 @@ function setupGreetings(
 
   bot.on("callback_query", async (query) => {
     const chatId = query.message.chat.id.toString();
+    const messageId = query.message.message_id;
     const data = query.data;
     const user = await getUserData(chatId);
 
@@ -341,6 +373,7 @@ function setupGreetings(
       user.state = null;
       await saveUserData(user);
       await updateUserCommands(chatId);
+      await bot.deleteMessage(chatId, messageId);
       const message = `Отлично, ${chosenName}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
       const keyboard = {
         inline_keyboard: [
@@ -350,13 +383,16 @@ function setupGreetings(
           ],
         ],
       };
-      await bot.sendMessage(chatId, message, {
+      const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+      user.lastMessageId = sentMessage.message_id;
+      await saveUserData(user);
     } else if (data === "keep_name") {
       user.state = null;
       await saveUserData(user);
       await updateUserCommands(chatId);
+      await bot.deleteMessage(chatId, messageId);
       const message = `Отлично, ${user.name}! 🤗\nХочешь, чтобы я делал твой день чуточку лучше? Я могу желать тебе доброго утра для бодрого старта и спокойной ночи для сладких снов. Как тебе идейка? ☺️`;
       const keyboard = {
         inline_keyboard: [
@@ -366,27 +402,33 @@ function setupGreetings(
           ],
         ],
       };
-      await bot.sendMessage(chatId, message, {
+      const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+      user.lastMessageId = sentMessage.message_id;
+      await saveUserData(user);
     } else if (data === "set_morning") {
-      await bot.sendMessage(
+      await bot.deleteMessage(chatId, messageId);
+      const sentMessage = await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
       );
+      user.lastRequestMessageId = sentMessage.message_id;
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
-      await bot.sendMessage(
+      await bot.deleteMessage(chatId, messageId);
+      const sentMessage = await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
       );
+      user.lastRequestMessageId = sentMessage.message_id;
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
     } else if (data === "reset_morning") {
       user.morningTime = null;
       await saveUserData(user);
-
+      await bot.deleteMessage(chatId, messageId);
       let message = "Время на утро сброшено 👍";
       if (user.eveningTime) {
         const remaining = calculateRemainingTime(user, "evening");
@@ -401,13 +443,15 @@ function setupGreetings(
       }
 
       const keyboard = getKeyboard(user, false);
-      await bot.sendMessage(chatId, message, {
+      const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+      user.lastMessageId = sentMessage.message_id;
+      await saveUserData(user);
     } else if (data === "reset_evening") {
       user.eveningTime = null;
       await saveUserData(user);
-
+      await bot.deleteMessage(chatId, messageId);
       let message = "Время на ночь сброшено 👍";
       if (user.morningTime) {
         const remaining = calculateRemainingTime(user, "morning");
@@ -422,9 +466,11 @@ function setupGreetings(
       }
 
       const keyboard = getKeyboard(user, false);
-      await bot.sendMessage(chatId, message, {
+      const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+      user.lastMessageId = sentMessage.message_id;
+      await saveUserData(user);
     } else if (data === "forget_name") {
       user.name = null;
       user.morningTime = null;
@@ -432,6 +478,7 @@ function setupGreetings(
       user.state = "waiting_for_name";
       await saveUserData(user);
       await updateUserCommands(chatId);
+      await bot.deleteMessage(chatId, messageId);
       const message = "Ты кто? 🤨";
       const keyboard = {
         inline_keyboard: [
@@ -443,14 +490,18 @@ function setupGreetings(
           ],
         ],
       };
-      await bot.sendMessage(chatId, message, {
+      const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
+      user.lastMessageId = sentMessage.message_id;
+      await saveUserData(user);
     } else if (data === "introduce") {
-      await bot.sendMessage(
+      await bot.deleteMessage(chatId, messageId);
+      const sentMessage = await bot.sendMessage(
         chatId,
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
+      user.lastRequestMessageId = sentMessage.message_id;
       user.state = "waiting_for_name";
       await saveUserData(user);
     }
