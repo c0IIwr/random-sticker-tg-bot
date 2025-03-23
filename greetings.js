@@ -117,11 +117,7 @@ function setupGreetings(
     if (user.lastHelloCommandId) {
       try {
         await bot.deleteMessage(chatId, user.lastHelloCommandId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${user.lastHelloCommandId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
     }
     user.lastHelloCommandId = msg.message_id;
 
@@ -129,11 +125,7 @@ function setupGreetings(
       for (const messageId of user.helloMessages) {
         try {
           await bot.deleteMessage(chatId, messageId);
-        } catch (error) {
-          console.error(
-            `Не удалось удалить сообщение ${messageId}: ${error.message}`
-          );
-        }
+        } catch (error) {}
       }
       user.helloMessages = [];
     }
@@ -141,11 +133,7 @@ function setupGreetings(
     if (user.lastRequestMessageId) {
       try {
         await bot.deleteMessage(chatId, user.lastRequestMessageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
       user.lastRequestMessageId = null;
     }
 
@@ -153,11 +141,7 @@ function setupGreetings(
       for (const messageId of user.timeRequestMessages) {
         try {
           await bot.deleteMessage(chatId, messageId);
-        } catch (error) {
-          console.error(
-            `Не удалось удалить сообщение ${messageId}: ${error.message}`
-          );
-        }
+        } catch (error) {}
       }
       user.timeRequestMessages = [];
     }
@@ -232,20 +216,12 @@ function setupGreetings(
 
         try {
           await bot.deleteMessage(chatId, msg.message_id);
-        } catch (error) {
-          console.error(
-            `Не удалось удалить сообщение ${msg.message_id}: ${error.message}`
-          );
-        }
+        } catch (error) {}
 
         if (user.lastRequestMessageId) {
           try {
             await bot.deleteMessage(chatId, user.lastRequestMessageId);
-          } catch (error) {
-            console.error(
-              `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-            );
-          }
+          } catch (error) {}
           user.lastRequestMessageId = null;
         }
 
@@ -324,11 +300,7 @@ function setupGreetings(
 
         try {
           await bot.deleteMessage(chatId, msg.message_id);
-        } catch (error) {
-          console.error(
-            `Не удалось удалить сообщение ${msg.message_id}: ${error.message}`
-          );
-        }
+        } catch (error) {}
 
         if (match) {
           const hours = parseInt(match[1], 10);
@@ -357,24 +329,8 @@ function setupGreetings(
             if (user.lastRequestMessageId) {
               try {
                 await bot.deleteMessage(chatId, user.lastRequestMessageId);
-              } catch (error) {
-                console.error(
-                  `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-                );
-              }
+              } catch (error) {}
               user.lastRequestMessageId = null;
-            }
-            if (user.timeRequestMessages.length > 0) {
-              for (const messageId of user.timeRequestMessages) {
-                try {
-                  await bot.deleteMessage(chatId, messageId);
-                } catch (error) {
-                  console.error(
-                    `Не удалось удалить сообщение ${messageId}: ${error.message}`
-                  );
-                }
-              }
-              user.timeRequestMessages = [];
             }
 
             const tzText = formatTimezone(offset);
@@ -418,44 +374,6 @@ function setupGreetings(
             });
             user.helloMessages.push(sentMessage.message_id);
             await saveUserData(user);
-          } else {
-            if (user.timeRequestMessages.length === 0) {
-              if (user.lastRequestMessageId) {
-                try {
-                  await bot.deleteMessage(chatId, user.lastRequestMessageId);
-                } catch (error) {
-                  console.error(
-                    `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-                  );
-                }
-              }
-              const sentMessage = await bot.sendMessage(
-                chatId,
-                "Укажи время, например, 23:59 или 23:59 UTC+10"
-              );
-              user.timeRequestMessages.push(sentMessage.message_id);
-              user.lastRequestMessageId = sentMessage.message_id;
-              await saveUserData(user);
-            }
-          }
-        } else {
-          if (user.timeRequestMessages.length === 0) {
-            if (user.lastRequestMessageId) {
-              try {
-                await bot.deleteMessage(chatId, user.lastRequestMessageId);
-              } catch (error) {
-                console.error(
-                  `Не удалось удалить сообщение ${user.lastRequestMessageId}: ${error.message}`
-                );
-              }
-            }
-            const sentMessage = await bot.sendMessage(
-              chatId,
-              "Укажи время, например, 23:59 или 23:59 UTC+10"
-            );
-            user.timeRequestMessages.push(sentMessage.message_id);
-            user.lastRequestMessageId = sentMessage.message_id;
-            await saveUserData(user);
           }
         }
       }
@@ -478,11 +396,7 @@ function setupGreetings(
 
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
       user.lastRequestMessageId = null;
 
       await updateUserCommands(chatId);
@@ -505,11 +419,7 @@ function setupGreetings(
 
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
       user.lastRequestMessageId = null;
 
       await updateUserCommands(chatId);
@@ -530,11 +440,7 @@ function setupGreetings(
     } else if (data === "set_morning") {
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
       const sentMessage = await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
@@ -545,11 +451,7 @@ function setupGreetings(
     } else if (data === "set_evening") {
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
       const sentMessage = await bot.sendMessage(
         chatId,
         "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
@@ -562,11 +464,7 @@ function setupGreetings(
 
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
 
       let message = "Время на утро сброшено 👍";
       if (user.eveningTime) {
@@ -592,11 +490,7 @@ function setupGreetings(
 
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
 
       let message = "Время на ночь сброшено 👍";
       if (user.morningTime) {
@@ -625,11 +519,7 @@ function setupGreetings(
 
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
 
       const message = "Ты кто? 🤨";
       const keyboard = {
@@ -645,11 +535,7 @@ function setupGreetings(
     } else if (data === "introduce") {
       try {
         await bot.deleteMessage(chatId, messageId);
-      } catch (error) {
-        console.error(
-          `Не удалось удалить сообщение ${messageId}: ${error.message}`
-        );
-      }
+      } catch (error) {}
 
       const sentMessage = await bot.sendMessage(
         chatId,
