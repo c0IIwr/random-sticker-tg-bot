@@ -604,7 +604,7 @@ bot.on("message", async (msg) => {
       await bot.deleteMessage(chatId, msg.message_id);
       const sentMessage = await bot.sendMessage(
         chatId,
-        `Добавлен набор "${setName}", а теперь отправь стикер. Из этого стикерпака будет выбираться случайный стикер.`
+        `Добавлен набор «${setName}». А теперь отправь стикер, из этого стикерпака будет выбираться случайный стикер`
       );
       user.state = "waiting_for_sticker";
       user.lastRequestMessageId = sentMessage.message_id;
@@ -642,9 +642,9 @@ bot.on("message", async (msg) => {
     };
     let message;
     if (result.alreadyExists) {
-      message = `Стикерпак "${result.packName}" уже есть в наборе "${setName}"`;
+      message = `Стикерпак «${result.packName}» уже есть в наборе «${setName}»`;
     } else {
-      message = `Добавлен стикерпак "${result.packName}"`;
+      message = `Добавлен стикерпак «${result.packName}»`;
     }
     const sentMessage = await bot.sendMessage(chatId, message, {
       reply_markup: JSON.stringify(keyboard),
@@ -712,7 +712,7 @@ bot.on("callback_query", async (query) => {
       }
       keyboard.inline_keyboard.push([
         {
-          text: `Удалить "${user.currentSet}"`,
+          text: `Удалить «${user.currentSet}»`,
           callback_data: `delete_set_${user.currentSet}`,
         },
       ]);
@@ -734,12 +734,12 @@ bot.on("callback_query", async (query) => {
     await bot.deleteMessage(chatId, query.message.message_id);
     const keyboard = {
       inline_keyboard: [
-        [{ text: "Удалить", callback_data: `confirm_delete_${setName}` }],
+        [{ text: "Удалить 🗑️", callback_data: `confirm_delete_${setName}` }],
       ],
     };
     const sentMessage = await bot.sendMessage(
       chatId,
-      `Ты точно хочешь удалить "${setName}"? 🤔`,
+      `Ты точно хочешь удалить «${setName}»? 🤔`,
       {
         reply_markup: JSON.stringify(keyboard),
       }
@@ -767,7 +767,7 @@ bot.on("callback_query", async (query) => {
     await bot.deleteMessage(chatId, query.message.message_id);
     const sentMessage = await bot.sendMessage(
       chatId,
-      "Отправь стикер. Из этого стикерпака будет выбираться случайный стикер."
+      "Отправь стикер. Из этого стикерпака будет выбираться случайный стикер"
     );
     user.state = "waiting_for_sticker";
     user.lastRequestMessageId = sentMessage.message_id;
@@ -801,16 +801,33 @@ bot.on("callback_query", async (query) => {
       try {
         await bot.deleteMessage(chatId, query.message.message_id);
       } catch (error) {}
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "Случайный стикер",
+              callback_data: `send_random_sticker_${setName}`,
+            },
+          ],
+        ],
+      };
       const sentMessage = await bot.sendMessage(
         chatId,
-        `Список отправленных стикеров для "${setName}" сброшен.`
+        `Список отправленных стикеров для набора «${setName}» сброшен 👍`,
+        {
+          reply_markup: JSON.stringify(keyboard),
+        }
       );
       user.stickerMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     } else {
-      const sentMessage = await bot.sendMessage(chatId, "Набор не найден.");
+      const sentMessage = await bot.sendMessage(chatId, "Набор не найден");
       user.stickerMessageIds.push(sentMessage.message_id);
+      await saveUserData(user);
     }
+  } else if (data.startsWith("send_random_sticker_")) {
+    const setName = data.replace("send_random_sticker_", "");
+    await sendStickerFromCustomSet(bot, chatId, user, setName);
   }
 
   await bot.answerCallbackQuery(query.id);

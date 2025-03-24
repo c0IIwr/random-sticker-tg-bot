@@ -72,7 +72,7 @@ async function getSetStatistics(bot, user, allStickers) {
       stickerCount > 0 ? ((sentCount / stickerCount) * 100).toFixed(2) : 0;
 
     let message =
-      `<b>"${setName}"</b>\n` +
+      `<b>«${setName}»</b>\n` +
       `<b>Всего стикерпаков:</b> ${packCount}\n` +
       `<b>Всего стикеров:</b> ${stickerCount}\n` +
       `<b>Отправлено стикеров:</b> ${sentCount} (${percentageSent}%)\n` +
@@ -99,7 +99,7 @@ async function getSetStatistics(bot, user, allStickers) {
       totalStickers > 0 ? ((sentCount / totalStickers) * 100).toFixed(2) : 0;
 
     return (
-      `<b>"${setName}"</b>\n` +
+      `<b>«${setName}»</b>\n` +
       `<b>Всего стикерпаков:</b> ${set.packs.length}\n` +
       `<b>Всего стикеров:</b> ${totalStickers}\n` +
       `<b>Отправлено стикеров:</b> ${sentCount} (${percentageSent}%)\n` +
@@ -108,21 +108,22 @@ async function getSetStatistics(bot, user, allStickers) {
   }
 }
 
-async function sendStickerFromCustomSet(bot, chatId, user) {
-  if (!user.lastCustomSet || user.stickerSets.length === 0) {
+async function sendStickerFromCustomSet(bot, chatId, user, setName = null) {
+  const targetSetName = setName || user.lastCustomSet;
+  if (!targetSetName || user.stickerSets.length === 0) {
     const sentMessage = await bot.sendMessage(
       chatId,
-      "У тебя нет своих наборов стикеров. Создай свой набор в /info."
+      "У тебя нет своих наборов стикеров. Создай свой набор в /info"
     );
     user.stickerMessageIds.push(sentMessage.message_id);
     return;
   }
 
-  const set = user.stickerSets.find((s) => s.name === user.lastCustomSet);
+  const set = user.stickerSets.find((s) => s.name === targetSetName);
   if (!set || set.packs.length === 0) {
     const sentMessage = await bot.sendMessage(
       chatId,
-      "В твоем последнем наборе нет стикерпаков."
+      "В твоем последнем наборе нет стикерпаков"
     );
     user.stickerMessageIds.push(sentMessage.message_id);
     return;
@@ -149,9 +150,13 @@ async function sendStickerFromCustomSet(bot, chatId, user) {
         ],
       ],
     };
-    const sentMessage = await bot.sendMessage(chatId, "Все стикеры кончились", {
-      reply_markup: JSON.stringify(keyboard),
-    });
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      `Все стикеры из набора «${set.name}» кончились`,
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
+    );
     user.stickerMessageIds.push(sentMessage.message_id);
   } else {
     const randomIndex = Math.floor(Math.random() * availableStickers.length);
