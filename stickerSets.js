@@ -111,9 +111,17 @@ async function getSetStatistics(bot, user, allStickers) {
 async function sendStickerFromCustomSet(bot, chatId, user, setName = null) {
   const targetSetName = setName || user.lastCustomSet;
   if (!targetSetName || user.stickerSets.length === 0) {
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Добавить свой набор", callback_data: "add_set" }],
+      ],
+    };
     const sentMessage = await bot.sendMessage(
       chatId,
-      "У тебя нет своих наборов стикеров. Создай свой набор в /info"
+      "У тебя нет своих наборов стикеров",
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
     );
     user.stickerMessageIds.push(sentMessage.message_id);
     return;
