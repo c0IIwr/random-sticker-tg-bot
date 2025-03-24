@@ -683,10 +683,15 @@ bot.on("callback_query", async (query) => {
   const user = await getUserData(chatId);
 
   if (data === "choose_set") {
+    const addSetText =
+      user.stickerSets.length > 0
+        ? "Добавить новый набор"
+        : "Добавить свой набор";
     const keyboard = { inline_keyboard: [] };
+
     if (user.currentSet === "Стикеры с котиками") {
       keyboard.inline_keyboard.push([
-        { text: "Добавить свой набор", callback_data: "add_set" },
+        { text: addSetText, callback_data: "add_set" },
       ]);
       const customSets = user.stickerSets.map((set) => ({
         text: set.name,
@@ -697,7 +702,7 @@ bot.on("callback_query", async (query) => {
       }
     } else {
       keyboard.inline_keyboard.push([
-        { text: "Добавить свой набор", callback_data: "add_set" },
+        { text: addSetText, callback_data: "add_set" },
         {
           text: "Стикеры с котиками",
           callback_data: "select_set_Стикеры с котиками",
@@ -741,7 +746,7 @@ bot.on("callback_query", async (query) => {
     };
     const sentMessage = await bot.sendMessage(
       chatId,
-      `Ты точно хочешь удалить «${setName}»? 🤔`,
+      `Ты точно хочешь удалить набор «${setName}»? 🤔`,
       {
         reply_markup: JSON.stringify(keyboard),
       }
