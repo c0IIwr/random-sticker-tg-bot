@@ -405,7 +405,7 @@ async function sendSticker(msg) {
 
 bot.onText(/\/kitty/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   sendSticker(msg);
 });
 
@@ -450,9 +450,20 @@ async function deleteMessages(chatId, messageIds) {
   }
 }
 
+async function resetUserStateWithDeletion(chatId) {
+  const user = await getUserData(chatId);
+  if (user.lastRequestMessageId) {
+    try {
+      await bot.deleteMessage(chatId, user.lastRequestMessageId);
+    } catch (error) {}
+    user.lastRequestMessageId = null;
+  }
+  await resetUserState(chatId);
+}
+
 bot.onText(/\/reset/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
 
   await deleteMessages(chatId, user.resetMessageIds);
@@ -515,7 +526,7 @@ async function sendInfo(chatId) {
 
 bot.onText(/\/info/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
 
   await deleteMessages(chatId, user.infoMessageIds);
@@ -536,20 +547,20 @@ bot.onText(/котик/i, async (msg) => {
   const text = msg.text.toLowerCase();
   if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
     const chatId = msg.chat.id.toString();
-    await resetUserState(chatId);
+    await resetUserStateWithDeletion(chatId);
     sendSticker(msg);
   }
 });
 
 bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   sendSticker(msg);
 });
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
 
   await deleteMessages(chatId, user.startMessageIds);
@@ -660,7 +671,7 @@ async function sendRandomFact(chatId) {
 
 bot.onText(/\/fact/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   await sendRandomFact(chatId);
 });
 
@@ -726,9 +737,15 @@ bot.on("callback_query", async (query) => {
         [{ text: "Удалить", callback_data: `confirm_delete_${setName}` }],
       ],
     };
-    await bot.sendMessage(chatId, `Ты точно хочешь удалить "${setName}"? 🤔`, {
-      reply_markup: JSON.stringify(keyboard),
-    });
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      `Ты точно хочешь удалить "${setName}"? 🤔`,
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
+    );
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
   } else if (data.startsWith("confirm_delete_")) {
     const setName = data.replace("confirm_delete_", "");
     await deleteStickerSet(user, setName);
@@ -783,7 +800,7 @@ bot.on("callback_query", async (query) => {
 
 bot.onText(/\/sticker/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserState(chatId);
+  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
   await sendStickerFromCustomSet(bot, chatId, user);
 });
