@@ -123,13 +123,35 @@ async function sendStickerFromCustomSet(bot, chatId, user) {
     return;
   }
 
-  const randomPack = set.packs[Math.floor(Math.random() * set.packs.length)];
-  const stickers = await loadStickerPack(bot, randomPack);
-  const randomSticker = stickers[Math.floor(Math.random() * stickers.length)];
+  let allStickersInSet = [];
+  for (const pack of set.packs) {
+    const stickers = await loadStickerPack(bot, pack);
+    allStickersInSet = allStickersInSet.concat(stickers);
+  }
 
-  await bot.sendSticker(chatId, randomSticker.file_id);
-  if (!set.sentStickers.includes(randomSticker.file_id)) {
-    set.sentStickers.push(randomSticker.file_id);
+  const availableStickers = allStickersInSet.filter(
+    (sticker) => !set.sentStickers.includes(sticker.file_id)
+  );
+
+  if (availableStickers.length === 0) {
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: "Начать сначала",
+            callback_data: `reset_set_${set.name}`,
+          },
+        ],
+      ],
+    };
+    await bot.sendMessage(chatId, "Все стикеры кончились", {
+      reply_markup: JSON.stringify(keyboard),
+    });
+  } else {
+    const randomIndex = Math.floor(Math.random() * availableStickers.length);
+    const sticker = availableStickers[randomIndex];
+    await bot.sendSticker(chatId, sticker.file_id);
+    set.sentStickers.push(sticker.file_id);
     await saveUserData(user);
   }
 }

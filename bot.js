@@ -793,6 +793,19 @@ bot.on("callback_query", async (query) => {
     await sendSticker({ chat: { id: chatId }, from: query.from || {} });
   } else if (data === "more_fact") {
     await sendRandomFact(chatId);
+  } else if (data.startsWith("reset_set_")) {
+    const setName = data.replace("reset_set_", "");
+    const set = user.stickerSets.find((s) => s.name === setName);
+    if (set) {
+      set.sentStickers = [];
+      await saveUserData(user);
+      await bot.sendMessage(
+        chatId,
+        `Список отправленных стикеров для "${setName}" сброшен.`
+      );
+    } else {
+      await bot.sendMessage(chatId, "Набор не найден.");
+    }
   }
 
   await bot.answerCallbackQuery(query.id);
