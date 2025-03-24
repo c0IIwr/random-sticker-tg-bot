@@ -110,16 +110,21 @@ async function getSetStatistics(bot, user, allStickers) {
 
 async function sendStickerFromCustomSet(bot, chatId, user) {
   if (!user.lastCustomSet || user.stickerSets.length === 0) {
-    await bot.sendMessage(
+    const sentMessage = await bot.sendMessage(
       chatId,
       "У тебя нет своих наборов стикеров. Создай свой набор в /info."
     );
+    user.stickerMessageIds.push(sentMessage.message_id);
     return;
   }
 
   const set = user.stickerSets.find((s) => s.name === user.lastCustomSet);
   if (!set || set.packs.length === 0) {
-    await bot.sendMessage(chatId, "В твоем последнем наборе нет стикерпаков.");
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      "В твоем последнем наборе нет стикерпаков."
+    );
+    user.stickerMessageIds.push(sentMessage.message_id);
     return;
   }
 
@@ -144,9 +149,10 @@ async function sendStickerFromCustomSet(bot, chatId, user) {
         ],
       ],
     };
-    await bot.sendMessage(chatId, "Все стикеры кончились", {
+    const sentMessage = await bot.sendMessage(chatId, "Все стикеры кончились", {
       reply_markup: JSON.stringify(keyboard),
     });
+    user.stickerMessageIds.push(sentMessage.message_id);
   } else {
     const randomIndex = Math.floor(Math.random() * availableStickers.length);
     const sticker = availableStickers[randomIndex];

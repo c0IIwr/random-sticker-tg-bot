@@ -798,13 +798,18 @@ bot.on("callback_query", async (query) => {
     const set = user.stickerSets.find((s) => s.name === setName);
     if (set) {
       set.sentStickers = [];
-      await saveUserData(user);
-      await bot.sendMessage(
+      try {
+        await bot.deleteMessage(chatId, query.message.message_id);
+      } catch (error) {}
+      const sentMessage = await bot.sendMessage(
         chatId,
         `Список отправленных стикеров для "${setName}" сброшен.`
       );
+      user.stickerMessageIds.push(sentMessage.message_id);
+      await saveUserData(user);
     } else {
-      await bot.sendMessage(chatId, "Набор не найден.");
+      const sentMessage = await bot.sendMessage(chatId, "Набор не найден.");
+      user.stickerMessageIds.push(sentMessage.message_id);
     }
   }
 
@@ -815,7 +820,10 @@ bot.onText(/\/sticker/, async (msg) => {
   const chatId = msg.chat.id.toString();
   await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
+  await deleteMessages(chatId, user.stickerMessageIds);
+  user.stickerMessageIds = [msg.message_id];
   await sendStickerFromCustomSet(bot, chatId, user);
+  await saveUserData(user);
 });
 
 bot.setMyCommands([
