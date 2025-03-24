@@ -120,10 +120,14 @@ async function sendStickerFromCustomSet(bot, chatId, user, setName = null) {
   }
 
   const set = user.stickerSets.find((s) => s.name === targetSetName);
-  if (!set || set.packs.length === 0) {
+  if (!set) {
+    const sentMessage = await bot.sendMessage(chatId, "Набор не найден");
+    user.stickerMessageIds.push(sentMessage.message_id);
+    return;
+  } else if (set.packs.length === 0) {
     const sentMessage = await bot.sendMessage(
       chatId,
-      "В твоем последнем наборе нет стикерпаков"
+      `В наборе «${set.name}» нет стикерпаков`
     );
     user.stickerMessageIds.push(sentMessage.message_id);
     return;

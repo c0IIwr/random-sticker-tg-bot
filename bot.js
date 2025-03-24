@@ -80,10 +80,6 @@ async function updateUserCommands(chatId) {
   const helloDescription = user.name ? "👋 Поздороваться" : "👋 Познакомиться";
   const commands = [
     { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
-    { command: "/reset", description: "❌ Сброс отправленных стикеров" },
-    { command: "/info", description: "📃 Инфа о стикерпаках" },
-    { command: "/fact", description: "🧐 Случайный факт" },
-    { command: "/hello", description: helloDescription },
   ];
   if (user.stickerSets.length > 0) {
     commands.push({
@@ -91,6 +87,12 @@ async function updateUserCommands(chatId) {
       description: "🎉 Случайный стикер из выбранного набора",
     });
   }
+  commands.push(
+    { command: "/reset", description: "❌ Сброс отправленных стикеров" },
+    { command: "/info", description: "📃 Инфа о стикерпаках" },
+    { command: "/fact", description: "🧐 Случайный факт" },
+    { command: "/hello", description: helloDescription }
+  );
   await bot.setMyCommands(commands, {
     scope: { type: "chat", chat_id: chatId },
   });
