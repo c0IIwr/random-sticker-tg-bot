@@ -88,6 +88,7 @@ async function updateUserCommands(chatId) {
     });
   }
   commands.push(
+    { command: "/reset", description: "❌ Сброс отправленных стикеров" },
     { command: "/info", description: "📃 Инфа о стикерпаках" },
     { command: "/fact", description: "🧐 Случайный факт" },
     { command: "/hello", description: helloDescription }
@@ -426,18 +427,12 @@ async function resetSentStickers(chatId, silent = false) {
           [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
         ],
       };
-      const sentMessage = await bot.sendMessage(
-        chatId,
-        "Список отправленных стикеров сброшен 👍",
-        {
-          reply_markup: JSON.stringify(keyboard),
-        }
-      );
-      user.resetMessageId = sentMessage.message_id;
-      await saveUserData(user);
+      bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍", {
+        reply_markup: JSON.stringify(keyboard),
+      });
     }
   } catch (error) {
-    console.error("Ошибка в функции resetSentStickers:", error);
+    console.error("Ошибка в команде /reset:", error);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Разбудить котят 🫣", callback_data: "retry_reset" }],
@@ -465,14 +460,39 @@ async function resetUserStateWithDeletion(chatId) {
     } catch (error) {}
     user.lastRequestMessageId = null;
   }
-  if (user.resetMessageId) {
-    try {
-      await bot.deleteMessage(chatId, user.resetMessageId);
-    } catch (error) {}
-    user.resetMessageId = null;
-  }
   await resetUserState(chatId);
 }
+
+bot.onText(/\/reset/, async (msg) => {
+  const chatId = msg.chat.id.toString();
+  await resetUserStateWithDeletion(chatId);
+  const user = await getUserData(chatId, msg);
+
+  await deleteMessages(chatId, user.resetMessageIds);
+  user.resetMessageIds = [msg.message_id];
+
+  await deleteMessages(chatId, user.resetBotMessageIds);
+  user.resetBotMessageIds = [];
+
+  await deleteMessages(chatId, user.userCommandMessages);
+  user.userCommandMessages = [];
+
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
+    ],
+  };
+  const sentMessage = await bot.sendMessage(
+    chatId,
+    "Ты точно хочешь сбросить список отправленных стикеров? 🤔",
+    {
+      reply_markup: JSON.stringify(keyboard),
+    }
+  );
+
+  user.resetBotMessageIds.push(sentMessage.message_id);
+  await saveUserData(user);
+});
 
 async function sendInfo(chatId) {
   try {
@@ -483,6 +503,12 @@ async function sendInfo(chatId) {
       keyboard = {
         inline_keyboard: [
           [{ text: "Выбрать набор", callback_data: "choose_set" }],
+          [
+            {
+              text: "Сброс отправленных стикеров ❌",
+              callback_data: "reset_default_set",
+            },
+          ],
         ],
       };
     } else {
@@ -497,8 +523,6 @@ async function sendInfo(chatId) {
       parse_mode: "HTML",
       reply_markup: JSON.stringify(keyboard),
     });
-    user.infoBotMessageIds = [sentMessage.message_id];
-    await saveUserData(user);
     return sentMessage;
   } catch (error) {
     console.error("Ошибка в команде /info:", error);
@@ -521,7 +545,20 @@ async function sendInfo(chatId) {
 bot.onText(/\/info/, async (msg) => {
   const chatId = msg.chat.id.toString();
   await resetUserStateWithDeletion(chatId);
-  await sendInfo(chatId);
+  const user = await getUserData(chatId, msg);
+
+  await deleteMessages(chatId, user.infoMessageIds);
+  user.infoMessageIds = [msg.message_id];
+
+  await deleteMessages(chatId, user.infoBotMessageIds);
+  user.infoBotMessageIds = [];
+
+  await deleteMessages(chatId, user.userCommandMessages);
+  user.userCommandMessages = [];
+
+  const sentMessage = await sendInfo(chatId);
+  user.infoBotMessageIds.push(sentMessage.message_id);
+  await saveUserData(user);
 });
 
 bot.onText(/котик/i, async (msg) => {
@@ -544,19 +581,31 @@ bot.onText(/\/start/, async (msg) => {
   await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
 
+  await deleteMessages(chatId, user.startMessageIds);
+  user.startMessageIds = [msg.message_id];
+
+  await deleteMessages(chatId, user.startBotMessageIds);
+  user.startBotMessageIds = [];
+
+  await deleteMessages(chatId, user.userCommandMessages);
+  user.userCommandMessages = [];
+
   await updateUserCommands(chatId);
   const keyboard = {
     inline_keyboard: [
       [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
     ],
   };
-  await bot.sendMessage(
+  const sentMessage = await bot.sendMessage(
     chatId,
     "Нажми кнопку, чтобы получить стикер с котиком 🤗",
     {
       reply_markup: JSON.stringify(keyboard),
     }
   );
+
+  user.startBotMessageIds.push(sentMessage.message_id);
+  await saveUserData(user);
 });
 
 bot.on("message", async (msg) => {
@@ -566,7 +615,20 @@ bot.on("message", async (msg) => {
   if (msg.text && !msg.text.startsWith("/")) {
     const text = msg.text.trim();
 
-    if (user.state === "waiting_for_rename") {
+    if (user.state === "waiting_for_set_name") {
+      const setName = text;
+      await addStickerSet(user, setName);
+      await bot.deleteMessage(chatId, user.lastRequestMessageId);
+      await bot.deleteMessage(chatId, msg.message_id);
+      const sentMessage = await bot.sendMessage(
+        chatId,
+        `Добавлен набор «${setName}». А теперь отправь стикер, из этого стикерпака будет выбираться случайный стикер`
+      );
+      user.state = "waiting_for_sticker";
+      user.lastRequestMessageId = sentMessage.message_id;
+      await saveUserData(user);
+      await updateUserCommands(chatId);
+    } else if (user.state === "waiting_for_rename") {
       const newName = text;
       const set = user.stickerSets.find((s) => s.name === user.currentSet);
       if (set) {
@@ -576,19 +638,33 @@ bot.on("message", async (msg) => {
         }
         user.currentSet = newName;
         await saveUserData(user);
-        const infoMessage = await getSetStatistics(bot, user, allStickers);
+        await bot.deleteMessage(chatId, user.lastRequestMessageId);
+        await bot.deleteMessage(chatId, msg.message_id);
         const keyboard = {
           inline_keyboard: [
-            [{ text: "Выбрать набор", callback_data: "choose_set" }],
-            [{ text: "Изменить набор", callback_data: "edit_set" }],
+            [{ text: "Переименовать набор", callback_data: "rename_set" }],
+            [{ text: "Добавить стикерпак", callback_data: "add_stickerpack" }],
+            [
+              {
+                text: "Удалить стикерпак 🧹",
+                callback_data: "remove_stickerpack",
+              },
+            ],
+            [
+              {
+                text: "Сброс отправленных стикеров ❌",
+                callback_data: "reset_custom_set",
+              },
+            ],
+            [{ text: "Удалить набор 🗑️", callback_data: "delete_set" }],
           ],
         };
-        await bot.editMessageText(infoMessage, {
-          chat_id: chatId,
-          message_id: user.infoBotMessageIds[0],
-          parse_mode: "HTML",
-          reply_markup: JSON.stringify(keyboard),
-        });
+        const sentMessage = await bot.sendMessage(
+          chatId,
+          `Набор переименован в «${newName}»`,
+          { reply_markup: JSON.stringify(keyboard) }
+        );
+        user.lastRequestMessageId = sentMessage.message_id;
       }
       user.state = null;
       await saveUserData(user);
@@ -608,22 +684,30 @@ bot.on("message", async (msg) => {
       }
     }
   } else if (msg.sticker && user.state === "waiting_for_sticker") {
-    const setName = user.currentSet;
-    await addStickerPackToSet(bot, user, setName, msg.sticker);
-    const infoMessage = await getSetStatistics(bot, user, allStickers);
+    const setName = user.lastCustomSet;
+    const result = await addStickerPackToSet(bot, user, setName, msg.sticker);
+    await bot.deleteMessage(chatId, user.lastRequestMessageId);
+    await bot.deleteMessage(chatId, msg.message_id);
     const keyboard = {
       inline_keyboard: [
-        [{ text: "Выбрать набор", callback_data: "choose_set" }],
-        [{ text: "Изменить набор", callback_data: "edit_set" }],
+        [
+          {
+            text: "Добавить ещё стикерпак",
+            callback_data: "add_more_stickerpack",
+          },
+        ],
       ],
     };
-    await bot.editMessageText(infoMessage, {
-      chat_id: chatId,
-      message_id: user.infoBotMessageIds[0],
-      parse_mode: "HTML",
+    let message;
+    if (result.alreadyExists) {
+      message = `Стикерпак «${result.packName}» уже есть в наборе «${setName}»`;
+    } else {
+      message = `Добавлен стикерпак «${result.packName}»`;
+    }
+    const sentMessage = await bot.sendMessage(chatId, message, {
       reply_markup: JSON.stringify(keyboard),
     });
-    user.state = null;
+    user.lastRequestMessageId = sentMessage.message_id;
     await saveUserData(user);
   } else if (msg.sticker && user.state === "waiting_for_sticker_to_remove") {
     const packName = msg.sticker.set_name;
@@ -631,19 +715,43 @@ bot.on("message", async (msg) => {
     if (set && set.packs.includes(packName)) {
       set.packs = set.packs.filter((p) => p !== packName);
       await saveUserData(user);
-      const infoMessage = await getSetStatistics(bot, user, allStickers);
+      await bot.deleteMessage(chatId, user.lastRequestMessageId);
+      await bot.deleteMessage(chatId, msg.message_id);
       const keyboard = {
         inline_keyboard: [
-          [{ text: "Выбрать набор", callback_data: "choose_set" }],
-          [{ text: "Изменить набор", callback_data: "edit_set" }],
+          [
+            {
+              text: "Удалить ещё стикерпак 🧹",
+              callback_data: "remove_stickerpack",
+            },
+          ],
         ],
       };
-      await bot.editMessageText(infoMessage, {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-        reply_markup: JSON.stringify(keyboard),
-      });
+      const sentMessage = await bot.sendMessage(
+        chatId,
+        `Стикерпак «${packName}» удалён из набора «${user.currentSet}»`,
+        { reply_markup: JSON.stringify(keyboard) }
+      );
+      user.lastRequestMessageId = sentMessage.message_id;
+    } else {
+      await bot.deleteMessage(chatId, user.lastRequestMessageId);
+      await bot.deleteMessage(chatId, msg.message_id);
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "Удалить другой стикерпак 🧹",
+              callback_data: "remove_stickerpack",
+            },
+          ],
+        ],
+      };
+      const sentMessage = await bot.sendMessage(
+        chatId,
+        `Стикерпака «${packName}» нет в наборе «${user.currentSet}»`,
+        { reply_markup: JSON.stringify(keyboard) }
+      );
+      user.lastRequestMessageId = sentMessage.message_id;
     }
     user.state = null;
     await saveUserData(user);
@@ -683,11 +791,10 @@ bot.on("callback_query", async (query) => {
         : "Добавить свой набор";
     const keyboard = { inline_keyboard: [] };
 
-    keyboard.inline_keyboard.push([
-      { text: addSetText, callback_data: "add_set" },
-    ]);
-
     if (user.currentSet === "Стикеры с котиками") {
+      keyboard.inline_keyboard.push([
+        { text: addSetText, callback_data: "add_set" },
+      ]);
       const customSets = user.stickerSets.map((set) => ({
         text: set.name,
         callback_data: `select_set_${set.name}`,
@@ -695,14 +802,9 @@ bot.on("callback_query", async (query) => {
       for (let i = 0; i < customSets.length; i += 4) {
         keyboard.inline_keyboard.push(customSets.slice(i, i + 4));
       }
-      keyboard.inline_keyboard.push([
-        {
-          text: "Сброс отправленных стикеров ❌",
-          callback_data: "reset_default_set",
-        },
-      ]);
     } else {
       keyboard.inline_keyboard.push([
+        { text: addSetText, callback_data: "add_set" },
         {
           text: "Стикеры с котиками",
           callback_data: "select_set_Стикеры с котиками",
@@ -719,12 +821,8 @@ bot.on("callback_query", async (query) => {
       }
       keyboard.inline_keyboard.push([
         {
-          text: "Сброс отправленных стикеров ❌",
-          callback_data: "reset_custom_set",
-        },
-        {
-          text: "Изменить набор",
-          callback_data: "edit_set",
+          text: `Удалить «${user.currentSet}»`,
+          callback_data: `delete_set_${user.currentSet}`,
         },
       ]);
     }
@@ -740,6 +838,31 @@ bot.on("callback_query", async (query) => {
     const sentMessage = await sendInfo(chatId);
     user.infoBotMessageIds = [sentMessage.message_id];
     await saveUserData(user);
+  } else if (data.startsWith("delete_set_")) {
+    const setName = data.replace("delete_set_", "");
+    await bot.deleteMessage(chatId, query.message.message_id);
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Удалить 🗑️", callback_data: `confirm_delete_${setName}` }],
+      ],
+    };
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      `Ты точно хочешь удалить набор «${setName}»? 🤔`,
+      {
+        reply_markup: JSON.stringify(keyboard),
+      }
+    );
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
+  } else if (data.startsWith("confirm_delete_")) {
+    const setName = data.replace("confirm_delete_", "");
+    await deleteStickerSet(user, setName);
+    await bot.deleteMessage(chatId, query.message.message_id);
+    await updateUserCommands(chatId);
+    const sentMessage = await sendInfo(chatId);
+    user.infoBotMessageIds = [sentMessage.message_id];
+    await saveUserData(user);
   } else if (data === "add_set") {
     await bot.deleteMessage(chatId, query.message.message_id);
     const sentMessage = await bot.sendMessage(
@@ -749,7 +872,87 @@ bot.on("callback_query", async (query) => {
     user.state = "waiting_for_set_name";
     user.lastRequestMessageId = sentMessage.message_id;
     await saveUserData(user);
+  } else if (data === "add_more_stickerpack") {
+    await bot.deleteMessage(chatId, query.message.message_id);
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      "Отправь стикер, из этого стикерпака будет выбираться случайный стикер"
+    );
+    user.state = "waiting_for_sticker";
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
+  } else if (data === "confirm_reset") {
+    try {
+      await bot.deleteMessage(chatId, query.message.message_id);
+    } catch (error) {}
+    await resetSentStickers(chatId);
+  } else if (data === "random_sticker") {
+    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
+  } else if (data.startsWith("send_again_")) {
+    const emojis = data.replace("send_again_", "");
+    await sendStickerAgain(chatId, emojis);
+  } else if (data === "retry_sendSticker") {
+    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
+  } else if (data === "retry_reset") {
+    await resetSentStickers(chatId);
+  } else if (data === "retry_info") {
+    await sendInfo(chatId);
+  } else if (data === "reset_and_send") {
+    await resetSentStickers(chatId, true);
+    await sendSticker({ chat: { id: chatId }, from: query.from || {} });
+  } else if (data === "more_fact") {
+    await sendRandomFact(chatId);
+  } else if (data.startsWith("reset_set_")) {
+    const setName = data.replace("reset_set_", "");
+    const set = user.stickerSets.find((s) => s.name === setName);
+    if (set) {
+      set.sentStickers = [];
+      try {
+        await bot.deleteMessage(chatId, query.message.message_id);
+      } catch (error) {}
+      const keyboard = {
+        inline_keyboard: [
+          [
+            {
+              text: "Случайный стикер",
+              callback_data: `send_random_sticker_${setName}`,
+            },
+          ],
+        ],
+      };
+      const sentMessage = await bot.sendMessage(
+        chatId,
+        `Список отправленных стикеров для набора «${setName}» сброшен 👍`,
+        {
+          reply_markup: JSON.stringify(keyboard),
+        }
+      );
+      user.stickerMessageIds.push(sentMessage.message_id);
+      await saveUserData(user);
+    } else {
+      const sentMessage = await bot.sendMessage(chatId, "Набор не найден");
+      user.stickerMessageIds.push(sentMessage.message_id);
+      await saveUserData(user);
+    }
+  } else if (data.startsWith("send_random_sticker_")) {
+    const setName = data.replace("send_random_sticker_", "");
+    await sendStickerFromCustomSet(bot, chatId, user, setName);
+  } else if (data === "reset_default_set") {
+    await bot.deleteMessage(chatId, query.message.message_id);
+    const keyboard = {
+      inline_keyboard: [
+        [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
+      ],
+    };
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      "Ты точно хочешь сбросить список отправленных стикеров для набора «Стикеры с котиками»? 🤔",
+      { reply_markup: JSON.stringify(keyboard) }
+    );
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
   } else if (data === "edit_set") {
+    await bot.deleteMessage(chatId, query.message.message_id);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Переименовать набор", callback_data: "rename_set" }],
@@ -764,59 +967,56 @@ bot.on("callback_query", async (query) => {
         [{ text: "Удалить набор 🗑️", callback_data: "delete_set" }],
       ],
     };
-    await bot.editMessageReplyMarkup(JSON.stringify(keyboard), {
-      chat_id: chatId,
-      message_id: user.infoBotMessageIds[0],
-    });
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      `Выбери действие для набора «${user.currentSet}»`,
+      { reply_markup: JSON.stringify(keyboard) }
+    );
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
   } else if (data === "rename_set") {
-    await bot.editMessageText(
-      `Напиши новое название для «${user.currentSet}»`,
-      {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-      }
+    await bot.deleteMessage(chatId, query.message.message_id);
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      `Напиши новое название для «${user.currentSet}»`
     );
     user.state = "waiting_for_rename";
+    user.lastRequestMessageId = sentMessage.message_id;
     await saveUserData(user);
   } else if (data === "add_stickerpack") {
-    await bot.editMessageText(
-      "Отправь стикер, из этого стикерпака будет выбираться случайный стикер",
-      {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-      }
+    await bot.deleteMessage(chatId, query.message.message_id);
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      "Отправь стикер, из этого стикерпака будет выбираться случайный стикер"
     );
     user.state = "waiting_for_sticker";
+    user.lastRequestMessageId = sentMessage.message_id;
     await saveUserData(user);
   } else if (data === "remove_stickerpack") {
-    await bot.editMessageText(
-      `Отправь стикер, этот стикерпак удалится из «${user.currentSet}»`,
-      {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-      }
+    await bot.deleteMessage(chatId, query.message.message_id);
+    const sentMessage = await bot.sendMessage(
+      chatId,
+      `Отправь стикер, этот стикерпак удалится из «${user.currentSet}»`
     );
     user.state = "waiting_for_sticker_to_remove";
+    user.lastRequestMessageId = sentMessage.message_id;
     await saveUserData(user);
   } else if (data === "reset_custom_set") {
+    await bot.deleteMessage(chatId, query.message.message_id);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Сбросить 🗑️", callback_data: "confirm_reset_custom" }],
       ],
     };
-    await bot.editMessageText(
+    const sentMessage = await bot.sendMessage(
+      chatId,
       `Ты точно хочешь сбросить список отправленных стикеров для набора «${user.currentSet}»? 🤔`,
-      {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-        reply_markup: JSON.stringify(keyboard),
-      }
+      { reply_markup: JSON.stringify(keyboard) }
     );
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
   } else if (data === "delete_set") {
+    await bot.deleteMessage(chatId, query.message.message_id);
     const keyboard = {
       inline_keyboard: [
         [
@@ -827,112 +1027,37 @@ bot.on("callback_query", async (query) => {
         ],
       ],
     };
-    await bot.editMessageText(
+    const sentMessage = await bot.sendMessage(
+      chatId,
       `Ты точно хочешь удалить набор «${user.currentSet}»? 🤔`,
-      {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-        reply_markup: JSON.stringify(keyboard),
-      }
+      { reply_markup: JSON.stringify(keyboard) }
     );
+    user.lastRequestMessageId = sentMessage.message_id;
+    await saveUserData(user);
   } else if (data === "confirm_reset_custom") {
     const set = user.stickerSets.find((s) => s.name === user.currentSet);
     if (set) {
       set.sentStickers = [];
       await saveUserData(user);
-      const infoMessage = await getSetStatistics(bot, user, allStickers);
+      await bot.deleteMessage(chatId, query.message.message_id);
       const keyboard = {
         inline_keyboard: [
-          [{ text: "Выбрать набор", callback_data: "choose_set" }],
-          [{ text: "Изменить набор", callback_data: "edit_set" }],
+          [
+            {
+              text: "Случайный стикер",
+              callback_data: `send_random_sticker_${user.currentSet}`,
+            },
+          ],
         ],
       };
       const sentMessage = await bot.sendMessage(
         chatId,
         `Список отправленных стикеров для набора «${user.currentSet}» сброшен 👍`,
-        {
-          reply_markup: JSON.stringify({
-            inline_keyboard: [
-              [
-                {
-                  text: "Случайный стикер",
-                  callback_data: `send_random_sticker_${user.currentSet}`,
-                },
-              ],
-            ],
-          }),
-        }
+        { reply_markup: JSON.stringify(keyboard) }
       );
-      user.resetMessageId = sentMessage.message_id;
-      await bot.editMessageText(infoMessage, {
-        chat_id: chatId,
-        message_id: user.infoBotMessageIds[0],
-        parse_mode: "HTML",
-        reply_markup: JSON.stringify(keyboard),
-      });
+      user.stickerMessageIds.push(sentMessage.message_id);
+      await saveUserData(user);
     }
-  } else if (data.startsWith("confirm_delete_")) {
-    const setName = data.replace("confirm_delete_", "");
-    await deleteStickerSet(user, setName);
-    const infoMessage = await getSetStatistics(bot, user, allStickers);
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: "Выбрать набор", callback_data: "choose_set" }],
-      ],
-    };
-    await bot.editMessageText(infoMessage, {
-      chat_id: chatId,
-      message_id: user.infoBotMessageIds[0],
-      parse_mode: "HTML",
-      reply_markup: JSON.stringify(keyboard),
-    });
-  } else if (data === "reset_default_set") {
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
-      ],
-    };
-    await bot.editMessageText(
-      "Ты точно хочешь сбросить список отправленных стикеров для набора «Стикеры с котиками»? 🤔",
-      {
-        chat_id: chatId,
-        message_id: query.message.message_id,
-        parse_mode: "HTML",
-        reply_markup: JSON.stringify(keyboard),
-      }
-    );
-  } else if (data === "confirm_reset") {
-    await resetSentStickers(chatId);
-    const infoMessage = await getSetStatistics(bot, user, allStickers);
-    const keyboard = {
-      inline_keyboard: [
-        [{ text: "Выбрать набор", callback_data: "choose_set" }],
-      ],
-    };
-    await bot.editMessageText(infoMessage, {
-      chat_id: chatId,
-      message_id: user.infoBotMessageIds[0],
-      parse_mode: "HTML",
-      reply_markup: JSON.stringify(keyboard),
-    });
-  } else if (data.startsWith("send_random_sticker_")) {
-    const setName = data.replace("send_random_sticker_", "");
-    await sendStickerFromCustomSet(bot, chatId, user, setName);
-  } else if (data === "random_sticker") {
-    await sendSticker({ chat: { id: chatId } });
-  } else if (data === "retry_info") {
-    await sendInfo(chatId);
-  } else if (data === "retry_sendSticker") {
-    await sendSticker({ chat: { id: chatId } });
-  } else if (data === "reset_and_send") {
-    await resetSentStickers(chatId, true);
-    await sendSticker({ chat: { id: chatId } });
-  } else if (data.startsWith("send_again_")) {
-    const emojis = data.replace("send_again_", "");
-    await sendStickerAgain(chatId, emojis);
-  } else if (data === "more_fact") {
-    await sendRandomFact(chatId);
   }
 
   await bot.answerCallbackQuery(query.id);
@@ -942,11 +1067,15 @@ bot.onText(/\/sticker/, async (msg) => {
   const chatId = msg.chat.id.toString();
   await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
+  await deleteMessages(chatId, user.stickerMessageIds);
+  user.stickerMessageIds = [msg.message_id];
   await sendStickerFromCustomSet(bot, chatId, user);
+  await saveUserData(user);
 });
 
 bot.setMyCommands([
   { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
+  { command: "/reset", description: "❌ Сброс отправленных стикеров" },
   { command: "/info", description: "📃 Инфа о стикерпаках" },
   { command: "/fact", description: "🧐 Случайный факт" },
   { command: "/hello", description: "👋 Познакомиться" },
