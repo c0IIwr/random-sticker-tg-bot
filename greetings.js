@@ -113,6 +113,7 @@ function setupGreetings(
     user.helloMessages = user.helloMessages || [];
     user.timeRequestMessages = user.timeRequestMessages || [];
     user.userTimeInputMessages = user.userTimeInputMessages || [];
+    user.helloBotMessageIds = user.helloBotMessageIds || [];
 
     if (user.lastHelloCommandId) {
       try {
@@ -120,14 +121,15 @@ function setupGreetings(
       } catch (error) {}
     }
     user.lastHelloCommandId = msg.message_id;
+    user.userCommandMessages.push(msg.message_id);
 
-    if (user.helloMessages.length > 0) {
-      for (const messageId of user.helloMessages) {
+    if (user.helloBotMessageIds.length > 0) {
+      for (const messageId of user.helloBotMessageIds) {
         try {
           await bot.deleteMessage(chatId, messageId);
         } catch (error) {}
       }
-      user.helloMessages = [];
+      user.helloBotMessageIds = [];
     }
 
     if (user.lastRequestMessageId) {
@@ -154,6 +156,7 @@ function setupGreetings(
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloBotMessageIds.push(sentMessage.message_id);
       user.state = "waiting_for_name";
       await saveUserData(user);
     } else {
@@ -191,7 +194,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.helloMessages.push(sentMessage.message_id);
+      user.helloBotMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     }
   });
@@ -201,10 +204,6 @@ function setupGreetings(
       const chatId = msg.chat.id.toString();
       const user = await getUserData(chatId, msg);
       const text = msg.text.trim();
-
-      user.helloMessages = user.helloMessages || [];
-      user.timeRequestMessages = user.timeRequestMessages || [];
-      user.userTimeInputMessages = user.userTimeInputMessages || [];
 
       if (user.state === "waiting_for_name") {
         if (/котик/i.test(text)) {
@@ -268,6 +267,7 @@ function setupGreetings(
             reply_markup: JSON.stringify(keyboard),
           });
           user.lastRequestMessageId = sentMessage.message_id;
+          user.helloBotMessageIds.push(sentMessage.message_id);
           user.state = "choosing_name";
           await saveUserData(user);
         } else {
@@ -288,7 +288,7 @@ function setupGreetings(
           const sentMessage = await bot.sendMessage(chatId, message, {
             reply_markup: JSON.stringify(keyboard),
           });
-          user.helloMessages.push(sentMessage.message_id);
+          user.helloBotMessageIds.push(sentMessage.message_id);
           await saveUserData(user);
         }
       } else if (
@@ -372,7 +372,7 @@ function setupGreetings(
             const sentMessage = await bot.sendMessage(chatId, message, {
               reply_markup: JSON.stringify(keyboard),
             });
-            user.helloMessages.push(sentMessage.message_id);
+            user.helloBotMessageIds.push(sentMessage.message_id);
             await saveUserData(user);
           }
         }
@@ -385,9 +385,6 @@ function setupGreetings(
     const messageId = query.message.message_id;
     const data = query.data;
     const user = await getUserData(chatId);
-
-    user.helloMessages = user.helloMessages || [];
-    user.timeRequestMessages = user.timeRequestMessages || [];
 
     if (data.startsWith("choose_name_")) {
       const chosenName = data.replace("choose_name_", "");
@@ -412,7 +409,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.helloMessages.push(sentMessage.message_id);
+      user.helloBotMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "keep_name") {
       user.state = null;
@@ -435,7 +432,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.helloMessages.push(sentMessage.message_id);
+      user.helloBotMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "set_morning") {
       try {
@@ -446,6 +443,7 @@ function setupGreetings(
         "Во сколько тебе пожелать доброго утра? Укажи время, например, 08:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 08:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloBotMessageIds.push(sentMessage.message_id);
       user.state = "waiting_for_morning_time";
       await saveUserData(user);
     } else if (data === "set_evening") {
@@ -457,6 +455,7 @@ function setupGreetings(
         "Во сколько тебе пожелать спокойной ночи? Укажи время, например, 22:00. Часовой пояс по умолчанию UTC+3, но можно указать свой, например, 22:00 UTC+10."
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloBotMessageIds.push(sentMessage.message_id);
       user.state = "waiting_for_evening_time";
       await saveUserData(user);
     } else if (data === "reset_morning") {
@@ -483,7 +482,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.helloMessages.push(sentMessage.message_id);
+      user.helloBotMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "reset_evening") {
       user.eveningTime = null;
@@ -509,7 +508,7 @@ function setupGreetings(
       const sentMessage = await bot.sendMessage(chatId, message, {
         reply_markup: JSON.stringify(keyboard),
       });
-      user.helloMessages.push(sentMessage.message_id);
+      user.helloBotMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "forget_name") {
       user.name = null;
@@ -531,6 +530,7 @@ function setupGreetings(
         reply_markup: JSON.stringify(keyboard),
       });
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloBotMessageIds.push(sentMessage.message_id);
       await saveUserData(user);
     } else if (data === "introduce") {
       try {
@@ -542,6 +542,7 @@ function setupGreetings(
         "Приветик 👋😜 я Пупсик 🤗 А как тебя зовут?"
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.helloBotMessageIds.push(sentMessage.message_id);
       user.state = "waiting_for_name";
       await saveUserData(user);
     }

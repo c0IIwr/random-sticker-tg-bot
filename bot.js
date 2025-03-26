@@ -410,6 +410,8 @@ async function deletePreviousBotMessages(user) {
     ...user.resetBotMessageIds,
     ...user.infoBotMessageIds,
     ...user.stickerMessageIds,
+    ...user.userCommandMessages,
+    ...user.helloBotMessageIds,
   ];
   for (const messageId of messageIds) {
     try {
@@ -420,6 +422,8 @@ async function deletePreviousBotMessages(user) {
   user.resetBotMessageIds = [];
   user.infoBotMessageIds = [];
   user.stickerMessageIds = [];
+  user.userCommandMessages = [];
+  user.helloBotMessageIds = [];
 }
 
 bot.onText(/\/kitty/, async (msg) => {
@@ -427,6 +431,7 @@ bot.onText(/\/kitty/, async (msg) => {
   const user = await getUserData(chatId, msg);
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
+  user.userCommandMessages.push(msg.message_id);
   sendSticker(msg);
 });
 
@@ -446,9 +451,15 @@ async function resetSentStickers(chatId, silent = false) {
           [{ text: "Случайный котик 🤗", callback_data: "random_sticker" }],
         ],
       };
-      bot.sendMessage(chatId, "Список отправленных стикеров сброшен 👍", {
-        reply_markup: JSON.stringify(keyboard),
-      });
+      const sentMessage = await bot.sendMessage(
+        chatId,
+        "Список отправленных стикеров сброшен 👍",
+        {
+          reply_markup: JSON.stringify(keyboard),
+        }
+      );
+      user.resetBotMessageIds.push(sentMessage.message_id);
+      await saveUserData(user);
     }
   } catch (error) {
     console.error("Ошибка в функции resetSentStickers:", error);
@@ -543,7 +554,7 @@ bot.onText(/\/info/, async (msg) => {
   user.infoBotMessageIds = [];
 
   await deleteMessages(chatId, user.userCommandMessages);
-  user.userCommandMessages = [];
+  user.userCommandMessages = [msg.message_id];
 
   const sentMessage = await sendInfo(chatId);
   user.infoBotMessageIds.push(sentMessage.message_id);
@@ -557,6 +568,7 @@ bot.onText(/котик/i, async (msg) => {
     const user = await getUserData(chatId, msg);
     await deletePreviousBotMessages(user);
     await resetUserStateWithDeletion(chatId);
+    user.userCommandMessages.push(msg.message_id);
     sendSticker(msg);
   }
 });
@@ -566,6 +578,7 @@ bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, a
   const user = await getUserData(chatId, msg);
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
+  user.userCommandMessages.push(msg.message_id);
   sendSticker(msg);
 });
 
@@ -582,7 +595,7 @@ bot.onText(/\/start/, async (msg) => {
   user.startBotMessageIds = [];
 
   await deleteMessages(chatId, user.userCommandMessages);
-  user.userCommandMessages = [];
+  user.userCommandMessages = [msg.message_id];
 
   await updateUserCommands(chatId);
   const keyboard = {
@@ -605,6 +618,17 @@ bot.onText(/\/start/, async (msg) => {
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
+
+  if (
+    (user.state === "waiting_for_sticker" ||
+      user.state === "waiting_for_sticker_to_remove") &&
+    !msg.sticker
+  ) {
+    try {
+      await bot.deleteMessage(chatId, msg.message_id);
+    } catch (error) {}
+    return;
+  }
 
   if (msg.text && !msg.text.startsWith("/")) {
     const text = msg.text.trim();
@@ -727,6 +751,7 @@ bot.on("message", async (msg) => {
         { reply_markup: JSON.stringify(keyboard) }
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.state = "waiting_for_sticker_to_remove";
     } else {
       await bot.deleteMessage(chatId, user.lastRequestMessageId);
       await bot.deleteMessage(chatId, msg.message_id);
@@ -746,8 +771,8 @@ bot.on("message", async (msg) => {
         { reply_markup: JSON.stringify(keyboard) }
       );
       user.lastRequestMessageId = sentMessage.message_id;
+      user.state = "waiting_for_sticker_to_remove";
     }
-    user.state = null;
     await saveUserData(user);
   }
 });
@@ -772,6 +797,7 @@ bot.onText(/\/fact/, async (msg) => {
   const user = await getUserData(chatId, msg);
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
+  user.userCommandMessages.push(msg.message_id);
   await sendRandomFact(chatId);
 });
 
@@ -1067,6 +1093,7 @@ bot.onText(/\/sticker/, async (msg) => {
   await resetUserStateWithDeletion(chatId);
   await deleteMessages(chatId, user.stickerMessageIds);
   user.stickerMessageIds = [msg.message_id];
+  user.userCommandMessages.push(msg.message_id);
   await sendStickerFromCustomSet(bot, chatId, user);
   await saveUserData(user);
 });
