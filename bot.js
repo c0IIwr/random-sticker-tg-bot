@@ -88,7 +88,6 @@ async function updateUserCommands(chatId) {
     });
   }
   commands.push(
-    { command: "/reset", description: "❌ Сброс отправленных стикеров" },
     { command: "/info", description: "📃 Инфа о стикерпаках" },
     { command: "/fact", description: "🧐 Случайный факт" },
     { command: "/hello", description: helloDescription }
@@ -405,8 +404,28 @@ async function sendSticker(msg) {
   }
 }
 
+async function deletePreviousBotMessages(user) {
+  const messageIds = [
+    ...user.startBotMessageIds,
+    ...user.resetBotMessageIds,
+    ...user.infoBotMessageIds,
+    ...user.stickerMessageIds,
+  ];
+  for (const messageId of messageIds) {
+    try {
+      await bot.deleteMessage(user.chatId, messageId);
+    } catch (error) {}
+  }
+  user.startBotMessageIds = [];
+  user.resetBotMessageIds = [];
+  user.infoBotMessageIds = [];
+  user.stickerMessageIds = [];
+}
+
 bot.onText(/\/kitty/, async (msg) => {
   const chatId = msg.chat.id.toString();
+  const user = await getUserData(chatId, msg);
+  await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
   sendSticker(msg);
 });
@@ -432,7 +451,7 @@ async function resetSentStickers(chatId, silent = false) {
       });
     }
   } catch (error) {
-    console.error("Ошибка в команде /reset:", error);
+    console.error("Ошибка в функции resetSentStickers:", error);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Разбудить котят 🫣", callback_data: "retry_reset" }],
@@ -462,37 +481,6 @@ async function resetUserStateWithDeletion(chatId) {
   }
   await resetUserState(chatId);
 }
-
-bot.onText(/\/reset/, async (msg) => {
-  const chatId = msg.chat.id.toString();
-  await resetUserStateWithDeletion(chatId);
-  const user = await getUserData(chatId, msg);
-
-  await deleteMessages(chatId, user.resetMessageIds);
-  user.resetMessageIds = [msg.message_id];
-
-  await deleteMessages(chatId, user.resetBotMessageIds);
-  user.resetBotMessageIds = [];
-
-  await deleteMessages(chatId, user.userCommandMessages);
-  user.userCommandMessages = [];
-
-  const keyboard = {
-    inline_keyboard: [
-      [{ text: "Сбросить 🗑️", callback_data: "confirm_reset" }],
-    ],
-  };
-  const sentMessage = await bot.sendMessage(
-    chatId,
-    "Ты точно хочешь сбросить список отправленных стикеров? 🤔",
-    {
-      reply_markup: JSON.stringify(keyboard),
-    }
-  );
-
-  user.resetBotMessageIds.push(sentMessage.message_id);
-  await saveUserData(user);
-});
 
 async function sendInfo(chatId) {
   try {
@@ -525,7 +513,7 @@ async function sendInfo(chatId) {
     });
     return sentMessage;
   } catch (error) {
-    console.error("Ошибка в команде /info:", error);
+    console.error("Ошибка в функции sendInfo:", error);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Разбудить котят 🫣", callback_data: "retry_info" }],
@@ -544,8 +532,9 @@ async function sendInfo(chatId) {
 
 bot.onText(/\/info/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
+  await deletePreviousBotMessages(user);
+  await resetUserStateWithDeletion(chatId);
 
   await deleteMessages(chatId, user.infoMessageIds);
   user.infoMessageIds = [msg.message_id];
@@ -565,6 +554,8 @@ bot.onText(/котик/i, async (msg) => {
   const text = msg.text.toLowerCase();
   if (text !== "отправить котика 🤗" && text !== "ещё котик 🤗") {
     const chatId = msg.chat.id.toString();
+    const user = await getUserData(chatId, msg);
+    await deletePreviousBotMessages(user);
     await resetUserStateWithDeletion(chatId);
     sendSticker(msg);
   }
@@ -572,14 +563,17 @@ bot.onText(/котик/i, async (msg) => {
 
 bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, async (msg) => {
   const chatId = msg.chat.id.toString();
+  const user = await getUserData(chatId, msg);
+  await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
   sendSticker(msg);
 });
 
 bot.onText(/\/start/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
+  await deletePreviousBotMessages(user);
+  await resetUserStateWithDeletion(chatId);
 
   await deleteMessages(chatId, user.startMessageIds);
   user.startMessageIds = [msg.message_id];
@@ -775,6 +769,8 @@ async function sendRandomFact(chatId) {
 
 bot.onText(/\/fact/, async (msg) => {
   const chatId = msg.chat.id.toString();
+  const user = await getUserData(chatId, msg);
+  await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
   await sendRandomFact(chatId);
 });
@@ -802,6 +798,12 @@ bot.on("callback_query", async (query) => {
       for (let i = 0; i < customSets.length; i += 4) {
         keyboard.inline_keyboard.push(customSets.slice(i, i + 4));
       }
+      keyboard.inline_keyboard.push([
+        {
+          text: "Сброс отправленных стикеров ❌",
+          callback_data: "reset_default_set",
+        },
+      ]);
     } else {
       keyboard.inline_keyboard.push([
         { text: addSetText, callback_data: "add_set" },
@@ -820,10 +822,7 @@ bot.on("callback_query", async (query) => {
         keyboard.inline_keyboard.push(customSets.slice(i, i + 4));
       }
       keyboard.inline_keyboard.push([
-        {
-          text: `Удалить «${user.currentSet}»`,
-          callback_data: `delete_set_${user.currentSet}`,
-        },
+        { text: "Изменить набор", callback_data: "edit_set" },
       ]);
     }
     await bot.editMessageReplyMarkup(JSON.stringify(keyboard), {
@@ -952,7 +951,6 @@ bot.on("callback_query", async (query) => {
     user.lastRequestMessageId = sentMessage.message_id;
     await saveUserData(user);
   } else if (data === "edit_set") {
-    await bot.deleteMessage(chatId, query.message.message_id);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Переименовать набор", callback_data: "rename_set" }],
@@ -967,12 +965,11 @@ bot.on("callback_query", async (query) => {
         [{ text: "Удалить набор 🗑️", callback_data: "delete_set" }],
       ],
     };
-    const sentMessage = await bot.sendMessage(
-      chatId,
-      `Выбери действие для набора «${user.currentSet}»`,
-      { reply_markup: JSON.stringify(keyboard) }
-    );
-    user.lastRequestMessageId = sentMessage.message_id;
+    await bot.editMessageReplyMarkup(JSON.stringify(keyboard), {
+      chat_id: chatId,
+      message_id: query.message.message_id,
+    });
+    user.state = "editing_set";
     await saveUserData(user);
   } else if (data === "rename_set") {
     await bot.deleteMessage(chatId, query.message.message_id);
@@ -1065,8 +1062,9 @@ bot.on("callback_query", async (query) => {
 
 bot.onText(/\/sticker/, async (msg) => {
   const chatId = msg.chat.id.toString();
-  await resetUserStateWithDeletion(chatId);
   const user = await getUserData(chatId, msg);
+  await deletePreviousBotMessages(user);
+  await resetUserStateWithDeletion(chatId);
   await deleteMessages(chatId, user.stickerMessageIds);
   user.stickerMessageIds = [msg.message_id];
   await sendStickerFromCustomSet(bot, chatId, user);
@@ -1075,7 +1073,6 @@ bot.onText(/\/sticker/, async (msg) => {
 
 bot.setMyCommands([
   { command: "/kitty", description: "🤗 Котик из случайного стикерпака" },
-  { command: "/reset", description: "❌ Сброс отправленных стикеров" },
   { command: "/info", description: "📃 Инфа о стикерпаках" },
   { command: "/fact", description: "🧐 Случайный факт" },
   { command: "/hello", description: "👋 Познакомиться" },
