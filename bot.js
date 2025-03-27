@@ -698,8 +698,16 @@ bot.on("message", async (msg) => {
   } else if (msg.sticker && user.state === "waiting_for_sticker") {
     const setName = user.lastCustomSet;
     const result = await addStickerPackToSet(bot, user, setName, msg.sticker);
-    await bot.deleteMessage(chatId, user.lastRequestMessageId);
-    await bot.deleteMessage(chatId, msg.message_id);
+    try {
+      await bot.deleteMessage(chatId, user.lastRequestMessageId);
+    } catch (error) {
+      console.error("Ошибка при удалении запросного сообщения:", error);
+    }
+    try {
+      await bot.deleteMessage(chatId, msg.message_id);
+    } catch (error) {
+      console.error("Ошибка при удалении сообщения со стикером:", error);
+    }
     let message;
     let buttonText;
     if (result.alreadyExists) {
@@ -723,6 +731,7 @@ bot.on("message", async (msg) => {
       reply_markup: JSON.stringify(keyboard),
     });
     user.lastRequestMessageId = sentMessage.message_id;
+    user.state = null;
     await saveUserData(user);
   } else if (msg.sticker && user.state === "waiting_for_sticker_to_remove") {
     const packName = msg.sticker.set_name;

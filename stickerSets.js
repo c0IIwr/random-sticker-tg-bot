@@ -135,6 +135,9 @@ async function sendStickerFromCustomSet(bot, chatId, user, setName = null) {
     user.lastStickerResponse = "has_packs";
     return;
   } else if (set.packs.length === 0) {
+    user.lastCustomSet = set.name;
+    user.state = "waiting_for_sticker";
+    await saveUserData(user);
     const keyboard = {
       inline_keyboard: [
         [{ text: "Добавить стикерпак 🖼️", callback_data: "add_stickerpack" }],
