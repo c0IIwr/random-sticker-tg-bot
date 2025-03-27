@@ -156,7 +156,7 @@ async function sendStickerFromCustomSet(bot, chatId, user, setName = null) {
       inline_keyboard: [
         [
           {
-            text: "Начать сначала",
+            text: "Начать сначала 🎉",
             callback_data: `reset_set_${set.name}`,
           },
         ],

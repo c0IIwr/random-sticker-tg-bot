@@ -634,8 +634,13 @@ bot.on("message", async (msg) => {
         await bot.deleteMessage(chatId, msg.message_id);
         const keyboard = {
           inline_keyboard: [
-            [{ text: "Переименовать набор", callback_data: "rename_set" }],
-            [{ text: "Добавить стикерпак", callback_data: "add_stickerpack" }],
+            [{ text: "Переименовать набор ✏️", callback_data: "rename_set" }],
+            [
+              {
+                text: "Добавить стикерпак ➕",
+                callback_data: "add_stickerpack",
+              },
+            ],
             [
               {
                 text: "Удалить стикерпак 🧹",
@@ -691,10 +696,10 @@ bot.on("message", async (msg) => {
     let buttonText;
     if (result.alreadyExists) {
       message = `Стикерпак «${result.packName}» уже есть в наборе «${setName}»`;
-      buttonText = "Добавить другой стикерпак";
+      buttonText = "Добавить другой стикерпак ➕";
     } else {
       message = `Добавлен стикерпак «${result.packName}»`;
-      buttonText = "Добавить ещё стикерпак";
+      buttonText = "Добавить ещё стикерпак ➕";
     }
     const keyboard = {
       inline_keyboard: [
@@ -804,8 +809,8 @@ bot.on("callback_query", async (query) => {
   if (data === "choose_set") {
     const addSetText =
       user.stickerSets.length > 0
-        ? "Добавить новый набор"
-        : "Добавить свой набор";
+        ? "Добавить новый набор 📦"
+        : "Добавить свой набор 📦";
     const keyboard = { inline_keyboard: [] };
 
     if (user.currentSet === "Стикеры с котиками") {
@@ -827,7 +832,7 @@ bot.on("callback_query", async (query) => {
       }
     } else {
       keyboard.inline_keyboard.push([
-        { text: "Изменить набор", callback_data: "edit_set" },
+        { text: "Изменить набор ⚙️", callback_data: "edit_set" },
       ]);
       keyboard.inline_keyboard.push([
         { text: addSetText, callback_data: "add_set" },
@@ -934,7 +939,7 @@ bot.on("callback_query", async (query) => {
         inline_keyboard: [
           [
             {
-              text: "Случайный стикер",
+              text: "Случайный стикер 🎉",
               callback_data: `send_random_sticker_${setName}`,
             },
           ],
@@ -974,8 +979,8 @@ bot.on("callback_query", async (query) => {
   } else if (data === "edit_set") {
     const keyboard = {
       inline_keyboard: [
-        [{ text: "Переименовать набор", callback_data: "rename_set" }],
-        [{ text: "Добавить стикерпак", callback_data: "add_stickerpack" }],
+        [{ text: "Переименовать набор ✏️", callback_data: "rename_set" }],
+        [{ text: "Добавить стикерпак ➕", callback_data: "add_stickerpack" }],
         [{ text: "Удалить стикерпак 🧹", callback_data: "remove_stickerpack" }],
         [
           {
@@ -1062,7 +1067,7 @@ bot.on("callback_query", async (query) => {
         inline_keyboard: [
           [
             {
-              text: "Случайный стикер",
+              text: "Случайный стикер 🎉",
               callback_data: `send_random_sticker_${user.currentSet}`,
             },
           ],
