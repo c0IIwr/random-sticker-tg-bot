@@ -3,6 +3,7 @@ const facts = require("./facts.js");
 
 async function getUserData(chatId, msg = {}) {
   const usersCollection = await db.getUsersCollection();
+  let user = await usersCollection.findOne({ chatId: chatId.toString() });
 
   const defaultUser = {
     chatId: chatId.toString(),
@@ -14,6 +15,13 @@ async function getUserData(chatId, msg = {}) {
     allStickersSent: false,
     firstSent: null,
     lastSent: null,
+    firstName: "",
+    lastName: "",
+    username: "",
+    languageCode: "",
+    chatType: "",
+    chatTitle: "",
+    chatUsername: "",
     name: null,
     morningTime: null,
     eveningTime: null,
@@ -42,109 +50,89 @@ async function getUserData(chatId, msg = {}) {
     lastCommandMessages: {},
   };
 
-  const updateFields = {
-    firstName: msg.from?.first_name || "",
-    lastName: msg.from?.last_name || "",
-    username: msg.from?.username || "",
-    languageCode: msg.from?.language_code || "",
-    chatType: msg.chat?.type || "",
-    chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
-    chatUsername: msg.chat?.username || "",
-  };
-
-  const update = {
-    $setOnInsert: defaultUser,
-    $set: updateFields,
-  };
-
-  let result;
-  try {
-    result = await usersCollection.findOneAndUpdate(
-      { chatId: chatId.toString() },
-      update,
-      { upsert: true, returnDocument: "after" }
-    );
-  } catch (error) {
-    console.error("Ошибка при обновлении пользователя:", error);
-    throw error;
-  }
-
-  if (!result.value) {
-    console.error(
-      `Не удалось найти или создать пользователя с chatId: ${chatId}`
-    );
-    const newUser = { ...defaultUser, ...updateFields };
-    await usersCollection.insertOne(newUser);
-    return newUser;
-  }
-
-  let user = result.value;
-
-  for (const key in defaultUser) {
-    if (!(key in user)) {
-      user[key] = defaultUser[key];
+  if (!user) {
+    user = { ...defaultUser };
+    user.firstName = msg.from?.first_name || "";
+    user.lastName = msg.from?.last_name || "";
+    user.username = msg.from?.username || "";
+    user.languageCode = msg.from?.language_code || "";
+    user.chatType = msg.chat?.type || "";
+    user.chatTitle = msg.chat?.type !== "private" ? msg.chat?.title || "" : "";
+    user.chatUsername = msg.chat?.username || "";
+    await usersCollection.insertOne(user);
+  } else {
+    for (const key in defaultUser) {
+      if (!(key in user) || user[key] === null) {
+        user[key] = defaultUser[key];
+      }
     }
+    if (msg.from || msg.chat) {
+      user.firstName = msg.from?.first_name || user.firstName;
+      user.lastName = msg.from?.last_name || user.lastName;
+      user.username = msg.from?.username || user.username;
+      user.languageCode = msg.from?.language_code || user.languageCode;
+      user.chatType = msg.chat?.type || user.chatType;
+      user.chatTitle =
+        msg.chat?.type !== "private"
+          ? msg.chat?.title || user.chatTitle
+          : user.chatTitle;
+      user.chatUsername = msg.chat?.username || user.chatUsername;
+    }
+    await saveUserData(user);
   }
-
   return user;
 }
 
 async function saveUserData(user) {
   const usersCollection = await db.getUsersCollection();
-
-  try {
-    await usersCollection.updateOne(
-      { chatId: user.chatId },
-      {
-        $set: {
-          sentStickers: user.sentStickers,
-          stickerCount: user.stickerCount,
-          resetCount: user.resetCount,
-          movieCount: user.movieCount,
-          sentMovies: user.sentMovies,
-          allStickersSent: user.allStickersSent,
-          firstSent: user.firstSent,
-          lastSent: user.lastSent,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          username: user.username,
-          languageCode: user.languageCode,
-          chatType: user.chatType,
-          chatTitle: user.chatTitle,
-          chatUsername: user.chatUsername,
-          name: user.name,
-          morningTime: user.morningTime,
-          eveningTime: user.eveningTime,
-          timezone: user.timezone,
-          state: user.state,
-          sentFacts: user.sentFacts,
-          factCount: user.factCount,
-          morningGreetingIndex: user.morningGreetingIndex,
-          eveningGreetingIndex: user.eveningGreetingIndex,
-          helloMessages: user.helloMessages,
-          timeRequestMessages: user.timeRequestMessages,
-          userTimeInputMessages: user.userTimeInputMessages,
-          lastHelloCommandId: user.lastHelloCommandId,
-          lastRequestMessageId: user.lastRequestMessageId,
-          startMessageIds: user.startMessageIds,
-          resetMessageIds: user.resetMessageIds,
-          infoMessageIds: user.infoMessageIds,
-          userCommandMessages: user.userCommandMessages,
-          startBotMessageIds: user.startBotMessageIds,
-          resetBotMessageIds: user.resetBotMessageIds,
-          infoBotMessageIds: user.infoBotMessageIds,
-          stickerSets: user.stickerSets,
-          currentSet: user.currentSet,
-          lastCustomSet: user.lastCustomSet,
-          stickerMessageIds: user.stickerMessageIds,
-          lastCommandMessages: user.lastCommandMessages,
-        },
-      }
-    );
-  } catch (error) {
-    console.error("Ошибка при сохранении данных пользователя:", error);
-    throw error;
-  }
+  await usersCollection.updateOne(
+    { chatId: user.chatId },
+    {
+      $set: {
+        sentStickers: user.sentStickers,
+        stickerCount: user.stickerCount,
+        resetCount: user.resetCount,
+        movieCount: user.movieCount,
+        sentMovies: user.sentMovies,
+        allStickersSent: user.allStickersSent,
+        firstSent: user.firstSent,
+        lastSent: user.lastSent,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        username: user.username,
+        languageCode: user.languageCode,
+        chatType: user.chatType,
+        chatTitle: user.chatTitle,
+        chatUsername: user.chatUsername,
+        name: user.name,
+        morningTime: user.morningTime,
+        eveningTime: user.eveningTime,
+        timezone: user.timezone,
+        state: user.state,
+        sentFacts: user.sentFacts,
+        factCount: user.factCount,
+        morningGreetingIndex: user.morningGreetingIndex,
+        eveningGreetingIndex: user.eveningGreetingIndex,
+        helloMessages: user.helloMessages,
+        timeRequestMessages: user.timeRequestMessages,
+        userTimeInputMessages: user.userTimeInputMessages,
+        lastHelloCommandId: user.lastHelloCommandId,
+        lastRequestMessageId: user.lastRequestMessageId,
+        startMessageIds: user.startMessageIds,
+        resetMessageIds: user.resetMessageIds,
+        infoMessageIds: user.infoMessageIds,
+        userCommandMessages: user.userCommandMessages,
+        startBotMessageIds: user.startBotMessageIds,
+        resetBotMessageIds: user.resetBotMessageIds,
+        infoBotMessageIds: user.infoBotMessageIds,
+        stickerSets: user.stickerSets,
+        currentSet: user.currentSet,
+        lastCustomSet: user.lastCustomSet,
+        stickerMessageIds: user.stickerMessageIds,
+        lastCommandMessages: user.lastCommandMessages,
+      },
+    }
+  );
 }
 
 async function resetUserState(chatId) {
@@ -175,13 +163,3 @@ module.exports = {
   resetUserState,
   getAndMarkRandomFact,
 };
-
-(async () => {
-  const usersCollection = await db.getUsersCollection();
-  try {
-    await usersCollection.createIndex({ chatId: 1 }, { unique: true });
-    console.log("Уникальный индекс для chatId успешно создан.");
-  } catch (error) {
-    console.error("Ошибка при создании индекса:", error);
-  }
-})();
