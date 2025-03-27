@@ -1101,6 +1101,19 @@ bot.onText(/\/sticker/, async (msg) => {
 
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
+
+  if (
+    user.lastStickerResponse === "no_sets" ||
+    user.lastStickerResponse === "no_packs"
+  ) {
+    if (user.lastStickerCommandId) {
+      try {
+        await bot.deleteMessage(chatId, user.lastStickerCommandId);
+      } catch (error) {}
+    }
+  }
+  user.lastStickerCommandId = msg.message_id;
+
   await sendStickerFromCustomSet(bot, chatId, user);
   await saveUserData(user);
 });

@@ -48,6 +48,8 @@ async function getUserData(chatId, msg = {}) {
     lastCustomSet: null,
     stickerMessageIds: [],
     lastCommandMessages: {},
+    lastStickerResponse: null,
+    lastStickerCommandId: null,
   };
 
   if (!user) {
@@ -130,6 +132,8 @@ async function saveUserData(user) {
         lastCustomSet: user.lastCustomSet,
         stickerMessageIds: user.stickerMessageIds,
         lastCommandMessages: user.lastCommandMessages,
+        lastStickerResponse: user.lastStickerResponse,
+        lastStickerCommandId: user.lastStickerCommandId,
       },
     }
   );
