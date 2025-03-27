@@ -698,16 +698,8 @@ bot.on("message", async (msg) => {
   } else if (msg.sticker && user.state === "waiting_for_sticker") {
     const setName = user.lastCustomSet;
     const result = await addStickerPackToSet(bot, user, setName, msg.sticker);
-    try {
-      await bot.deleteMessage(chatId, user.lastRequestMessageId);
-    } catch (error) {
-      console.error("Ошибка при удалении запросного сообщения:", error);
-    }
-    try {
-      await bot.deleteMessage(chatId, msg.message_id);
-    } catch (error) {
-      console.error("Ошибка при удалении сообщения со стикером:", error);
-    }
+    await bot.deleteMessage(chatId, user.lastRequestMessageId);
+    await bot.deleteMessage(chatId, msg.message_id);
     let message;
     let buttonText;
     if (result.alreadyExists) {
