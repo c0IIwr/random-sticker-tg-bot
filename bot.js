@@ -84,7 +84,7 @@ async function updateUserCommands(chatId) {
   if (user.stickerSets.length > 0) {
     commands.push({
       command: "/sticker",
-      description: "🎉 Случайный стикер из выбранного набора",
+      description: "🎉 Случайный стикер из своего набора",
     });
   }
   commands.push(
@@ -506,7 +506,7 @@ async function sendInfo(chatId) {
     const infoMessage = await getSetStatistics(bot, user, allStickers);
     const keyboard = {
       inline_keyboard: [
-        [{ text: "Выбрать набор", callback_data: "choose_set" }],
+        [{ text: "Мои наборы 📦", callback_data: "choose_set" }],
       ],
     };
     const sentMessage = await bot.sendMessage(chatId, infoMessage, {
@@ -708,22 +708,25 @@ bot.on("message", async (msg) => {
     const result = await addStickerPackToSet(bot, user, setName, msg.sticker);
     await bot.deleteMessage(chatId, user.lastRequestMessageId);
     await bot.deleteMessage(chatId, msg.message_id);
+    let message;
+    let buttonText;
+    if (result.alreadyExists) {
+      message = `Стикерпак «${result.packName}» уже есть в наборе «${setName}»`;
+      buttonText = "Добавить другой стикерпак";
+    } else {
+      message = `Добавлен стикерпак «${result.packName}»`;
+      buttonText = "Добавить ещё стикерпак";
+    }
     const keyboard = {
       inline_keyboard: [
         [
           {
-            text: "Добавить ещё стикерпак",
+            text: buttonText,
             callback_data: "add_more_stickerpack",
           },
         ],
       ],
     };
-    let message;
-    if (result.alreadyExists) {
-      message = `Стикерпак «${result.packName}» уже есть в наборе «${setName}»`;
-    } else {
-      message = `Добавлен стикерпак «${result.packName}»`;
-    }
     const sentMessage = await bot.sendMessage(chatId, message, {
       reply_markup: JSON.stringify(keyboard),
     });
@@ -827,6 +830,12 @@ bot.on("callback_query", async (query) => {
 
     if (user.currentSet === "Стикеры с котиками") {
       keyboard.inline_keyboard.push([
+        {
+          text: "Сброс отправленных стикеров ❌",
+          callback_data: "reset_default_set",
+        },
+      ]);
+      keyboard.inline_keyboard.push([
         { text: addSetText, callback_data: "add_set" },
       ]);
       const customSets = user.stickerSets.map((set) => ({
@@ -836,13 +845,10 @@ bot.on("callback_query", async (query) => {
       for (let i = 0; i < customSets.length; i += 4) {
         keyboard.inline_keyboard.push(customSets.slice(i, i + 4));
       }
-      keyboard.inline_keyboard.push([
-        {
-          text: "Сброс отправленных стикеров ❌",
-          callback_data: "reset_default_set",
-        },
-      ]);
     } else {
+      keyboard.inline_keyboard.push([
+        { text: "Изменить набор", callback_data: "edit_set" },
+      ]);
       keyboard.inline_keyboard.push([
         { text: addSetText, callback_data: "add_set" },
         {
@@ -859,9 +865,6 @@ bot.on("callback_query", async (query) => {
       for (let i = 0; i < customSets.length; i += 4) {
         keyboard.inline_keyboard.push(customSets.slice(i, i + 4));
       }
-      keyboard.inline_keyboard.push([
-        { text: "Изменить набор", callback_data: "edit_set" },
-      ]);
     }
     await bot.editMessageReplyMarkup(JSON.stringify(keyboard), {
       chat_id: chatId,
@@ -1031,7 +1034,7 @@ bot.on("callback_query", async (query) => {
     await bot.deleteMessage(chatId, query.message.message_id);
     const sentMessage = await bot.sendMessage(
       chatId,
-      `Отправь стикер, этот стикерпак удалится из «${user.currentSet}»`
+      `Отправь стикер, этот стикерпак удалится из набора «${user.currentSet}»`
     );
     user.state = "waiting_for_sticker_to_remove";
     user.lastRequestMessageId = sentMessage.message_id;
