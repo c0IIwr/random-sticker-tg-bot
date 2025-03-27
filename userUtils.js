@@ -3,6 +3,7 @@ const facts = require("./facts.js");
 
 async function getUserData(chatId, msg = {}) {
   const usersCollection = await db.getUsersCollection();
+
   const defaultUser = {
     chatId: chatId.toString(),
     sentStickers: [],
@@ -13,13 +14,6 @@ async function getUserData(chatId, msg = {}) {
     allStickersSent: false,
     firstSent: null,
     lastSent: null,
-    firstName: "",
-    lastName: "",
-    username: "",
-    languageCode: "",
-    chatType: "",
-    chatTitle: "",
-    chatUsername: "",
     name: null,
     morningTime: null,
     eveningTime: null,
@@ -48,24 +42,32 @@ async function getUserData(chatId, msg = {}) {
     lastCommandMessages: {},
   };
 
-  const update = {
-    $setOnInsert: defaultUser,
-    $set: {
-      firstName: msg.from?.first_name || "",
-      lastName: msg.from?.last_name || "",
-      username: msg.from?.username || "",
-      languageCode: msg.from?.language_code || "",
-      chatType: msg.chat?.type || "",
-      chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
-      chatUsername: msg.chat?.username || "",
-    },
+  const updateFields = {
+    firstName: msg.from?.first_name || "",
+    lastName: msg.from?.last_name || "",
+    username: msg.from?.username || "",
+    languageCode: msg.from?.language_code || "",
+    chatType: msg.chat?.type || "",
+    chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
+    chatUsername: msg.chat?.username || "",
   };
 
-  const result = await usersCollection.findOneAndUpdate(
-    { chatId: chatId.toString() },
-    update,
-    { upsert: true, returnDocument: "after" }
-  );
+  const update = {
+    $setOnInsert: defaultUser,
+    $set: updateFields,
+  };
+
+  let result;
+  try {
+    result = await usersCollection.findOneAndUpdate(
+      { chatId: chatId.toString() },
+      update,
+      { upsert: true, returnDocument: "after" }
+    );
+  } catch (error) {
+    console.error("Ошибка при обновлении пользователя:", error);
+    throw error;
+  }
 
   let user = result.value;
 
@@ -80,54 +82,60 @@ async function getUserData(chatId, msg = {}) {
 
 async function saveUserData(user) {
   const usersCollection = await db.getUsersCollection();
-  await usersCollection.updateOne(
-    { chatId: user.chatId },
-    {
-      $set: {
-        sentStickers: user.sentStickers,
-        stickerCount: user.stickerCount,
-        resetCount: user.resetCount,
-        movieCount: user.movieCount,
-        sentMovies: user.sentMovies,
-        allStickersSent: user.allStickersSent,
-        firstSent: user.firstSent,
-        lastSent: user.lastSent,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        username: user.username,
-        languageCode: user.languageCode,
-        chatType: user.chatType,
-        chatTitle: user.chatTitle,
-        chatUsername: user.chatUsername,
-        name: user.name,
-        morningTime: user.morningTime,
-        eveningTime: user.eveningTime,
-        timezone: user.timezone,
-        state: user.state,
-        sentFacts: user.sentFacts,
-        factCount: user.factCount,
-        morningGreetingIndex: user.morningGreetingIndex,
-        eveningGreetingIndex: user.eveningGreetingIndex,
-        helloMessages: user.helloMessages,
-        timeRequestMessages: user.timeRequestMessages,
-        userTimeInputMessages: user.userTimeInputMessages,
-        lastHelloCommandId: user.lastHelloCommandId,
-        lastRequestMessageId: user.lastRequestMessageId,
-        startMessageIds: user.startMessageIds,
-        resetMessageIds: user.resetMessageIds,
-        infoMessageIds: user.infoMessageIds,
-        userCommandMessages: user.userCommandMessages,
-        startBotMessageIds: user.startBotMessageIds,
-        resetBotMessageIds: user.resetBotMessageIds,
-        infoBotMessageIds: user.infoBotMessageIds,
-        stickerSets: user.stickerSets,
-        currentSet: user.currentSet,
-        lastCustomSet: user.lastCustomSet,
-        stickerMessageIds: user.stickerMessageIds,
-        lastCommandMessages: user.lastCommandMessages,
-      },
-    }
-  );
+
+  try {
+    await usersCollection.updateOne(
+      { chatId: user.chatId },
+      {
+        $set: {
+          sentStickers: user.sentStickers,
+          stickerCount: user.stickerCount,
+          resetCount: user.resetCount,
+          movieCount: user.movieCount,
+          sentMovies: user.sentMovies,
+          allStickersSent: user.allStickersSent,
+          firstSent: user.firstSent,
+          lastSent: user.lastSent,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          languageCode: user.languageCode,
+          chatType: user.chatType,
+          chatTitle: user.chatTitle,
+          chatUsername: user.chatUsername,
+          name: user.name,
+          morningTime: user.morningTime,
+          eveningTime: user.eveningTime,
+          timezone: user.timezone,
+          state: user.state,
+          sentFacts: user.sentFacts,
+          factCount: user.factCount,
+          morningGreetingIndex: user.morningGreetingIndex,
+          eveningGreetingIndex: user.eveningGreetingIndex,
+          helloMessages: user.helloMessages,
+          timeRequestMessages: user.timeRequestMessages,
+          userTimeInputMessages: user.userTimeInputMessages,
+          lastHelloCommandId: user.lastHelloCommandId,
+          lastRequestMessageId: user.lastRequestMessageId,
+          startMessageIds: user.startMessageIds,
+          resetMessageIds: user.resetMessageIds,
+          infoMessageIds: user.infoMessageIds,
+          userCommandMessages: user.userCommandMessages,
+          startBotMessageIds: user.startBotMessageIds,
+          resetBotMessageIds: user.resetBotMessageIds,
+          infoBotMessageIds: user.infoBotMessageIds,
+          stickerSets: user.stickerSets,
+          currentSet: user.currentSet,
+          lastCustomSet: user.lastCustomSet,
+          stickerMessageIds: user.stickerMessageIds,
+          lastCommandMessages: user.lastCommandMessages,
+        },
+      }
+    );
+  } catch (error) {
+    console.error("Ошибка при сохранении данных пользователя:", error);
+    throw error;
+  }
 }
 
 async function resetUserState(chatId) {
@@ -158,3 +166,13 @@ module.exports = {
   resetUserState,
   getAndMarkRandomFact,
 };
+
+(async () => {
+  const usersCollection = await db.getUsersCollection();
+  try {
+    await usersCollection.createIndex({ chatId: 1 }, { unique: true });
+    console.log("Уникальный индекс для chatId успешно создан.");
+  } catch (error) {
+    console.error("Ошибка при создании индекса:", error);
+  }
+})();
