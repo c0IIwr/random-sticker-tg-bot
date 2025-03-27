@@ -3,8 +3,6 @@ const facts = require("./facts.js");
 
 async function getUserData(chatId, msg = {}) {
   const usersCollection = await db.getUsersCollection();
-  let user = await usersCollection.findOne({ chatId: chatId.toString() });
-
   const defaultUser = {
     chatId: chatId.toString(),
     sentStickers: [],
@@ -50,36 +48,33 @@ async function getUserData(chatId, msg = {}) {
     lastCommandMessages: {},
   };
 
-  if (!user) {
-    user = { ...defaultUser };
-    user.firstName = msg.from?.first_name || "";
-    user.lastName = msg.from?.last_name || "";
-    user.username = msg.from?.username || "";
-    user.languageCode = msg.from?.language_code || "";
-    user.chatType = msg.chat?.type || "";
-    user.chatTitle = msg.chat?.type !== "private" ? msg.chat?.title || "" : "";
-    user.chatUsername = msg.chat?.username || "";
-    await usersCollection.insertOne(user);
-  } else {
-    for (const key in defaultUser) {
-      if (!(key in user) || user[key] === null) {
-        user[key] = defaultUser[key];
-      }
+  const update = {
+    $setOnInsert: defaultUser,
+    $set: {
+      firstName: msg.from?.first_name || "",
+      lastName: msg.from?.last_name || "",
+      username: msg.from?.username || "",
+      languageCode: msg.from?.language_code || "",
+      chatType: msg.chat?.type || "",
+      chatTitle: msg.chat?.type !== "private" ? msg.chat?.title || "" : "",
+      chatUsername: msg.chat?.username || "",
+    },
+  };
+
+  const result = await usersCollection.findOneAndUpdate(
+    { chatId: chatId.toString() },
+    update,
+    { upsert: true, returnDocument: "after" }
+  );
+
+  let user = result.value;
+
+  for (const key in defaultUser) {
+    if (!(key in user)) {
+      user[key] = defaultUser[key];
     }
-    if (msg.from || msg.chat) {
-      user.firstName = msg.from?.first_name || user.firstName;
-      user.lastName = msg.from?.last_name || user.lastName;
-      user.username = msg.from?.username || user.username;
-      user.languageCode = msg.from?.language_code || user.languageCode;
-      user.chatType = msg.chat?.type || user.chatType;
-      user.chatTitle =
-        msg.chat?.type !== "private"
-          ? msg.chat?.title || user.chatTitle
-          : user.chatTitle;
-      user.chatUsername = msg.chat?.username || user.chatUsername;
-    }
-    await saveUserData(user);
   }
+
   return user;
 }
 
