@@ -731,7 +731,6 @@ bot.on("message", async (msg) => {
       reply_markup: JSON.stringify(keyboard),
     });
     user.lastRequestMessageId = sentMessage.message_id;
-    user.state = null;
     await saveUserData(user);
   } else if (msg.sticker && user.state === "waiting_for_sticker_to_remove") {
     const packName = msg.sticker.set_name;
