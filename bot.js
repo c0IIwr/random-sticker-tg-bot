@@ -155,65 +155,73 @@ async function updateUserDataInSheet(user) {
   const timezone = user.timezone || "";
 
   const headersRange = "Data!A1:Z1";
-  const headersResponse = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: headersRange,
-  });
-  const headers = headersResponse.data.values[0];
-
-  const userData = {
-    chatId,
-    fullName,
-    username,
-    languageCode,
-    chatType,
-    chatTitle,
-    chatLink,
-    stickerCount: stickerCountDisplay,
-    resetCount,
-    movieCount,
-    factCount,
-    firstSent,
-    lastSent,
-    name,
-    eveningTime,
-    morningTime,
-    timezone,
-  };
-
-  const dataRange = "Data!A2:Z";
-  const dataResponse = await sheets.spreadsheets.values.get({
-    spreadsheetId,
-    range: dataRange,
-  });
-  const rows = dataResponse.data.values || [];
-
-  const rowIndex = rows.findIndex(
-    (row) => row[headers.indexOf("chatId")] === chatId
-  );
-
-  if (rowIndex === -1) {
-    const newRow = headers.map((header) => userData[header] || "");
-    await sheets.spreadsheets.values.append({
+  try {
+    const headersResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "Data",
-      valueInputOption: "RAW",
-      resource: {
-        values: [newRow],
-      },
+      range: headersRange,
     });
-  } else {
-    const updateRow = rowIndex + 2;
-    const updateData = headers.map((header) => userData[header] || "");
-    const updateRange = `Data!A${updateRow}:Z${updateRow}`;
-    await sheets.spreadsheets.values.update({
+    const headers = headersResponse.data.values[0];
+
+    const userData = {
+      chatId,
+      fullName,
+      username,
+      languageCode,
+      chatType,
+      chatTitle,
+      chatLink,
+      stickerCount: stickerCountDisplay,
+      resetCount,
+      movieCount,
+      factCount,
+      firstSent,
+      lastSent,
+      name,
+      eveningTime,
+      morningTime,
+      timezone,
+    };
+
+    const dataRange = "Data!A2:Z";
+    const dataResponse = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: updateRange,
-      valueInputOption: "RAW",
-      resource: {
-        values: [updateData],
-      },
+      range: dataRange,
     });
+    const rows = dataResponse.data.values || [];
+
+    const rowIndex = rows.findIndex(
+      (row) => row[headers.indexOf("chatId")] === chatId
+    );
+
+    if (rowIndex === -1) {
+      const newRow = headers.map((header) => userData[header] || "");
+      await sheets.spreadsheets.values.append({
+        spreadsheetId,
+        range: "Data",
+        valueInputOption: "RAW",
+        resource: {
+          values: [newRow],
+        },
+      });
+    } else {
+      const updateRow = rowIndex + 2;
+      const updateData = headers.map((header) => userData[header] || "");
+      const updateRange = `Data!A${updateRow}:Z${updateRow}`;
+      await sheets.spreadsheets.values.update({
+        spreadsheetId,
+        range: updateRange,
+        valueInputOption: "RAW",
+        resource: {
+          values: [updateData],
+        },
+      });
+    }
+  } catch (error) {
+    if (error.response && error.response.status === 429) {
+      console.log("Ошибка: Превышен лимит запросов к Google Sheets API.");
+    } else {
+      console.error("Произошла ошибка при обновлении данных:", error);
+    }
   }
 }
 
@@ -637,7 +645,7 @@ bot.on("message", async (msg) => {
             [{ text: "Переименовать набор ✏️", callback_data: "rename_set" }],
             [
               {
-                text: "Добавить стикерпак ➕",
+                text: "Добавить стикерпак 🖼️",
                 callback_data: "add_stickerpack",
               },
             ],
@@ -696,10 +704,10 @@ bot.on("message", async (msg) => {
     let buttonText;
     if (result.alreadyExists) {
       message = `Стикерпак «${result.packName}» уже есть в наборе «${setName}»`;
-      buttonText = "Добавить другой стикерпак ➕";
+      buttonText = "Добавить другой стикерпак 🖼️";
     } else {
       message = `Добавлен стикерпак «${result.packName}»`;
-      buttonText = "Добавить ещё стикерпак ➕";
+      buttonText = "Добавить ещё стикерпак 🖼️";
     }
     const keyboard = {
       inline_keyboard: [
@@ -980,7 +988,7 @@ bot.on("callback_query", async (query) => {
     const keyboard = {
       inline_keyboard: [
         [{ text: "Переименовать набор ✏️", callback_data: "rename_set" }],
-        [{ text: "Добавить стикерпак ➕", callback_data: "add_stickerpack" }],
+        [{ text: "Добавить стикерпак 🖼️", callback_data: "add_stickerpack" }],
         [{ text: "Удалить стикерпак 🧹", callback_data: "remove_stickerpack" }],
         [
           {
