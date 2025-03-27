@@ -69,6 +69,15 @@ async function getUserData(chatId, msg = {}) {
     throw error;
   }
 
+  if (!result.value) {
+    console.error(
+      `Не удалось найти или создать пользователя с chatId: ${chatId}`
+    );
+    const newUser = { ...defaultUser, ...updateFields };
+    await usersCollection.insertOne(newUser);
+    return newUser;
+  }
+
   let user = result.value;
 
   for (const key in defaultUser) {
