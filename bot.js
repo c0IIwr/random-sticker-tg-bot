@@ -737,6 +737,14 @@ bot.on("message", async (msg) => {
     const set = user.stickerSets.find((s) => s.name === user.currentSet);
     if (set && set.packs.includes(packName)) {
       set.packs = set.packs.filter((p) => p !== packName);
+      if (userStickerPacks[packName]) {
+        const stickersToRemove = userStickerPacks[packName].map(
+          (sticker) => sticker.file_id
+        );
+        set.sentStickers = set.sentStickers.filter(
+          (file_id) => !stickersToRemove.includes(file_id)
+        );
+      }
       await saveUserData(user);
       await bot.deleteMessage(chatId, user.lastRequestMessageId);
       await bot.deleteMessage(chatId, msg.message_id);
