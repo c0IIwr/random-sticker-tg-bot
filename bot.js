@@ -429,13 +429,6 @@ bot.onText(/\/kitty/, async (msg) => {
   const user = await getUserData(chatId, msg);
   const command = "/kitty";
 
-  if (user.lastCommandMessages[command]) {
-    try {
-      await bot.deleteMessage(chatId, user.lastCommandMessages[command]);
-    } catch (error) {}
-  }
-  user.lastCommandMessages[command] = msg.message_id;
-
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
   sendSticker(msg);
@@ -558,13 +551,6 @@ bot.onText(/котик/i, async (msg) => {
     const user = await getUserData(chatId, msg);
     const command = "/kitty";
 
-    if (user.lastCommandMessages[command]) {
-      try {
-        await bot.deleteMessage(chatId, user.lastCommandMessages[command]);
-      } catch (error) {}
-    }
-    user.lastCommandMessages[command] = msg.message_id;
-
     await deletePreviousBotMessages(user);
     await resetUserStateWithDeletion(chatId);
     sendSticker(msg);
@@ -576,13 +562,6 @@ bot.onText(/^(Отправить котика 🤗|Ещё котик 🤗)$/i, a
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
   const command = "/kitty";
-
-  if (user.lastCommandMessages[command]) {
-    try {
-      await bot.deleteMessage(chatId, user.lastCommandMessages[command]);
-    } catch (error) {}
-  }
-  user.lastCommandMessages[command] = msg.message_id;
 
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
@@ -810,13 +789,6 @@ bot.onText(/\/fact/, async (msg) => {
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
   const command = "/fact";
-
-  if (user.lastCommandMessages[command]) {
-    try {
-      await bot.deleteMessage(chatId, user.lastCommandMessages[command]);
-    } catch (error) {}
-  }
-  user.lastCommandMessages[command] = msg.message_id;
 
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
@@ -1113,13 +1085,6 @@ bot.onText(/\/sticker/, async (msg) => {
   const chatId = msg.chat.id.toString();
   const user = await getUserData(chatId, msg);
   const command = "/sticker";
-
-  if (user.lastCommandMessages[command]) {
-    try {
-      await bot.deleteMessage(chatId, user.lastCommandMessages[command]);
-    } catch (error) {}
-  }
-  user.lastCommandMessages[command] = msg.message_id;
 
   await deletePreviousBotMessages(user);
   await resetUserStateWithDeletion(chatId);
