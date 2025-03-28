@@ -1,3 +1,4 @@
+const express = require("express");
 const TelegramBot = require("node-telegram-bot-api");
 const db = require("./db");
 const stickerPacks = require("./stickerPacks");
@@ -25,7 +26,43 @@ const regex = emojiRegex();
 const token = process.env.TOKEN;
 const bot = new TelegramBot(token);
 
+const server = express();
+server.use(express.json());
+
+const webhookPath = `/bot${token}`;
+const port = process.env.PORT || 3000;
+const webhookUrl = `https://random-sticker-tg-bot.vercel.app${webhookPath}`;
+
+bot
+  .setWebHook(webhookUrl)
+  .then(() => {
+    console.log(`Вебхук установлен на ${webhookUrl}`);
+  })
+  .catch((error) => {
+    console.error("Ошибка при установке вебхука:", error);
+  });
+
+server.post(webhookPath, (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+server.listen(port, () => {
+  console.log(`Сервер запущен на порту ${port}`);
+});
+
+const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+const auth = new google.auth.GoogleAuth({
+  credentials,
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+});
+const sheets = google.sheets({ version: "v4", auth });
+const spreadsheetId = process.env.SPREADSHEET_ID;
+
 let allStickers = [];
+
+global.userStickerPacks = userStickerPacks;
+
 async function loadStickers() {
   for (const pack of stickerPacks) {
     try {
@@ -37,58 +74,6 @@ async function loadStickers() {
   }
   console.log(`Загружено ${allStickers.length} стикеров`);
 }
-
-async function startBot() {
-  await db.connectToDb();
-  await loadStickers();
-  setupGreetings(bot, allStickers, updateUserCommands, updateUserDataInSheet);
-
-  const vercelUrl =
-    process.env.VERCEL_URL || "random-sticker-tg-bot.vercel.app";
-  const webhookUrl = `https://${vercelUrl}/api/webhook`;
-  await bot.setWebHook(webhookUrl);
-  console.log(`Вебхук установлен на ${webhookUrl}`);
-}
-
-startBot().catch(console.error);
-
-module.exports = async (req, res) => {
-  if (req.method === "POST") {
-    try {
-      bot.processUpdate(req.body);
-      res.status(200).send("OK");
-    } catch (error) {
-      console.error("Ошибка обработки обновления:", error);
-      res.status(500).send("Internal Server Error");
-    }
-  } else {
-    res.status(405).send("Method Not Allowed");
-  }
-};
-
-const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-});
-const sheets = google.sheets({ version: "v4", auth });
-const spreadsheetId = process.env.SPREADSHEET_ID;
-
-// let allStickers = [];
-
-global.userStickerPacks = userStickerPacks;
-
-// async function loadStickers() {
-//   for (const pack of stickerPacks) {
-//     try {
-//       const stickerSet = await bot.getStickerSet(pack);
-//       allStickers = allStickers.concat(stickerSet.stickers);
-//     } catch (error) {
-//       console.error(`Ошибка при загрузке пака ${pack}:`, error);
-//     }
-//   }
-//   console.log(`Загружено ${allStickers.length} стикеров`);
-// }
 
 async function updateUserCommands(chatId) {
   const user = await getUserData(chatId);
@@ -112,13 +97,13 @@ async function updateUserCommands(chatId) {
   });
 }
 
-// async function startBot() {
-//   await db.connectToDb();
-//   await loadStickers();
-//   setupGreetings(bot, allStickers, updateUserCommands, updateUserDataInSheet);
-// }
+async function startBot() {
+  await db.connectToDb();
+  await loadStickers();
+  setupGreetings(bot, allStickers, updateUserCommands, updateUserDataInSheet);
+}
 
-// startBot();
+startBot();
 
 async function updateUserDataInSheet(user) {
   const chatId = user.chatId;
