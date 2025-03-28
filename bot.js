@@ -31,7 +31,7 @@ server.use(express.json());
 
 const webhookPath = `/bot${token}`;
 const port = process.env.PORT || 3000;
-const webhookUrl = `https://random-sticker-tg-bot.vercel.app${webhookPath}`;
+const webhookUrl = `https://random-sticker-tg-bot-1.onrender.com${webhookPath}`;
 
 bot
   .setWebHook(webhookUrl)
@@ -43,7 +43,6 @@ bot
   });
 
 server.post(webhookPath, (req, res) => {
-  console.log("Получено обновление:", req.body);
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
