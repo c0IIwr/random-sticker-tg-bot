@@ -43,6 +43,7 @@ bot
   });
 
 server.post(webhookPath, (req, res) => {
+  console.log("Получено обновление:", req.body);
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
