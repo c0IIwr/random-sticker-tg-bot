@@ -311,6 +311,8 @@ function setupGreetings(
           if (timezoneInput) {
             offset = convertToOffset(timezoneInput);
             user.timezone = offset;
+          } else if (!user.timezone) {
+            user.timezone = "+03:00";
           }
 
           if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
