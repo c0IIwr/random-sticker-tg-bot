@@ -88,4 +88,5 @@ module.exports = [
   "Kotyakot",
   "kittysforlife_by_fStikBot",
   "TREESHA_666_by_fStikBot",
+  "kittykittykitty_by_fStikBot",
 ];
