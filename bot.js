@@ -31,7 +31,7 @@ server.use(express.json());
 
 const webhookPath = `/bot${token}`;
 const port = process.env.PORT || 3000;
-const webhookUrl = `https://random-sticker-tg-bot-1.onrender.com${webhookPath}`;
+const webhookUrl = `https://random-sticker-tg-bot.onrender.com${webhookPath}`;
 
 bot
   .setWebHook(webhookUrl)
