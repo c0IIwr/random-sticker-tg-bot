@@ -30,8 +30,6 @@ module.exports = [
   "UBFIUZF_by_stikers_du_ark_bot",
   "BCZQQBZ_by_stikers_du_ark_bot",
   "ultica",
-  // "eomhxvyc_by_stickrubot",
-  // "viexafqf_by_stickrubot",
   "gtrmogcr_by_stickrubot",
   "luvkit",
   "kitties4bynorufx_by_fStikBot",
@@ -89,4 +87,6 @@ module.exports = [
   "kittysforlife_by_fStikBot",
   "TREESHA_666_by_fStikBot",
   "kittykittykitty_by_fStikBot",
+  "LolAnimals2",
+  "RSSQTVNYVO_by_stikeri_stikeri_bot",
 ];
